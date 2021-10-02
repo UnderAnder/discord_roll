@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -66,10 +67,32 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+	if strings.HasPrefix(m.Content, "!roll") {
+		str := strings.Split(m.Content, " ")
+		maxScore := 100
+		quantity := 1
+		var sb strings.Builder
 
-	if m.Content == "!roll" {
+		if len(str) > 1 {
+			var err error
+			maxScore, err = strconv.Atoi(str[1])
+			if err != nil {
+				maxScore = 100
+			}
+			if len(str) == 3 {
+				quantity, err = strconv.Atoi(str[2])
+				if err != nil {
+					quantity = 1
+				}
+			}
+		}
 
-		s.ChannelMessageSend(m.ChannelID, getMessageAuthorNick(m)+" :game_die: "+strconv.Itoa(rand.Intn(101)))
+		sb.WriteString(getMessageAuthorNick(m))
+		for i := 0; i < quantity; i++ {
+			sb.WriteString(" :game_die:")
+			sb.WriteString(strconv.Itoa(rand.Intn(maxScore) + 1))
+		}
+		s.ChannelMessageSend(m.ChannelID, sb.String())
 	}
 
 	if m.Content == "!bottle" {
