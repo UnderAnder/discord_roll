@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -58,6 +59,8 @@ func main() {
 // message is created on any channel that the authenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
+	rand.Seed(time.Now().Unix())
+
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
 	if m.Author.ID == s.State.User.ID {
@@ -66,7 +69,37 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if m.Content == "!roll" {
 
-		s.ChannelMessageSend(m.ChannelID, strconv.Itoa(rand.Intn(101)))
+		s.ChannelMessageSend(m.ChannelID, getMessageAuthorNick(m)+" :game_die: "+strconv.Itoa(rand.Intn(101)))
+	}
 
+	if m.Content == "!bottle" {
+		members, err := s.GuildMembers(m.GuildID, "", 1000)
+		if err != nil {
+			fmt.Println("error can't get guild members", err)
+			return
+		}
+
+		randMember := members[rand.Intn(len(members))]
+		for randMember.User.ID == m.Author.ID {
+			randMember = members[rand.Intn(len(members))]
+		}
+
+		s.ChannelMessageSend(m.ChannelID, getMessageAuthorNick(m)+" :kiss: "+getMemberNick(randMember))
+	}
+}
+
+func getMessageAuthorNick(m *discordgo.MessageCreate) string {
+	if m.Member.Nick != "" {
+		return m.Member.Nick
+	} else {
+		return m.Author.Username
+	}
+}
+
+func getMemberNick(m *discordgo.Member) string {
+	if m.Nick != "" {
+		return m.Nick
+	} else {
+		return m.User.Username
 	}
 }
