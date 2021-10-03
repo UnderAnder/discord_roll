@@ -1,8 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +14,7 @@ import (
 // Variables used for command line parameters
 var (
 	Token string
+	DB    *sql.DB
 )
 
 func init() {
@@ -21,11 +23,16 @@ func init() {
 }
 
 func main() {
+	var err error
+	DB, err = sql.Open("sqlite3", "../db.sqlite3")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
-		fmt.Println("error creating Discord session,", err)
+		log.Fatal("error creating Discord session,", err)
 		return
 	}
 
@@ -38,16 +45,18 @@ func main() {
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
 	if err != nil {
-		fmt.Println("error opening connection,", err)
+		log.Fatal("error opening connection,", err)
 		return
 	}
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Println("Bot is now running. Press CTRL-C to exit.")
+	log.Println("Bot is now running. Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
 	// Cleanly close down the Discord session.
 	dg.Close()
+
+	defer DB.Close()
 }
