@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -41,18 +41,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 
+		// build output string
 		sb.WriteString(getMessageAuthorNick(m))
+		sb.WriteString(" (1-")
+		sb.WriteString(strconv.Itoa(maxScore))
+		sb.WriteString(") ")
 		for i := 0; i < quantity; i++ {
 			sb.WriteString(" :game_die:")
 			sb.WriteString(strconv.Itoa(rand.Intn(maxScore) + 1))
 		}
+
 		s.ChannelMessageSend(m.ChannelID, sb.String())
 	}
 
 	if m.Content == "!bottle" {
 		members, err := s.GuildMembers(m.GuildID, "", 1000)
 		if err != nil {
-			fmt.Println("error can't get guild members", err)
+			log.Println("error can't get guild members", err)
 			return
 		}
 
