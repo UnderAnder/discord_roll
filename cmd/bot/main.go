@@ -8,14 +8,15 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/UnderAnder/discord_roll/internal/discord"
+	"github.com/UnderAnder/discord_roll/internal/repository/sqlite"
 	"github.com/bwmarrin/discordgo"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // Variables used for command line parameters
 var (
 	Token string
-	DB    *sql.DB
-	City  string
 )
 
 func init() {
@@ -24,11 +25,13 @@ func init() {
 }
 
 func main() {
-	var err error
-	DB, err = sql.Open("sqlite3", "../db.sqlite3")
+	db, err := sql.Open("sqlite3", "./db.sqlite3")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
+
+	repository := sqlite.NewRepository(db)
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
@@ -37,17 +40,9 @@ func main() {
 		return
 	}
 
-	// Register the messageCreate func as a callback for MessageCreate events.
-	dg.AddHandler(messageCreate)
-
-	// In this example, we only care about receiving message events.
-	dg.Identify.Intents = discordgo.IntentsGuildMessages
-
-	// Open a websocket connection to Discord and begin listening.
-	err = dg.Open()
-	if err != nil {
-		log.Fatal("error opening connection,", err)
-		return
+	discordBot := discord.NewBot(dg, repository)
+	if err := discordBot.Start(); err != nil {
+		log.Fatal(err)
 	}
 
 	// Wait here until CTRL-C or other term signal is received.
@@ -58,6 +53,4 @@ func main() {
 
 	// Cleanly close down the Discord session.
 	dg.Close()
-
-	defer DB.Close()
 }

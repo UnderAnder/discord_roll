@@ -1,62 +1,75 @@
-package main
+package sqlite
 
 import (
 	"database/sql"
 	"log"
 	"strconv"
 	"strings"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
-func addScore(discordID string, score int) {
-	tx, err := DB.Begin()
+type Repository struct {
+	db *sql.DB
+}
+
+// constructor
+func NewRepository(db *sql.DB) *Repository {
+	return &Repository{db: db}
+}
+
+func (r *Repository) AddScore(discordID string, score int) error {
+	tx, err := r.db.Begin()
 	if err != nil {
 		log.Println(err)
 	}
 	stmt, err := tx.Prepare("insert into users(discord_id, score) values(?, ?) ON CONFLICT(discord_id) DO UPDATE SET score=score+?;")
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(discordID, score, score)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 	tx.Commit()
 
+	return nil
 }
 
-func getScore(discordID string) string {
-	stmt, err := DB.Prepare("select score from users where discord_id = ?")
+func (r *Repository) GetScore(discordID string) (string, error) {
+	stmt, err := r.db.Prepare("select score from users where discord_id = ?")
 	if err != nil {
 		log.Println(err)
+		return "", err
 	}
 	defer stmt.Close()
 	var score int
 	err = stmt.QueryRow(discordID).Scan(&score)
 	if err != nil {
 		log.Println(err)
+		return "", err
 	}
-	return strconv.Itoa(score)
+	return strconv.Itoa(score), nil
 }
 
-func cityExist(c string) bool {
-	stmt, err := DB.Prepare("select title_ru from cities where title_ru = ?")
+func (r *Repository) CityExist(c string) (bool, error) {
+	stmt, err := r.db.Prepare("select title_ru from cities where title_ru = ?")
 	if err != nil {
 		log.Println(err)
+		return false, err
 	}
 	defer stmt.Close()
 	var city string
 	err = stmt.QueryRow(strings.Title(c)).Scan(&city)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return false
+			return false, nil
 		} else {
 			log.Fatal(err)
-			return false
+			return false, err
 		}
 	}
-	return true
+	return true, nil
 }
