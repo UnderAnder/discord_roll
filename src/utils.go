@@ -1,6 +1,10 @@
 package main
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"unicode/utf8"
+
+	"github.com/bwmarrin/discordgo"
+)
 
 // UTILS
 
@@ -18,4 +22,12 @@ func getMemberNick(m *discordgo.Member) string {
 	} else {
 		return m.User.Username
 	}
+}
+
+func getLastChar(s string) string {
+	r, size := utf8.DecodeLastRuneInString(s)
+	if r == utf8.RuneError && (size == 0 || size == 1) {
+		size = 0
+	}
+	return s[len(s)-size:]
 }

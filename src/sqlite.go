@@ -1,8 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"strconv"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -38,4 +40,23 @@ func getScore(discordID string) string {
 		log.Println(err)
 	}
 	return strconv.Itoa(score)
+}
+
+func cityExist(c string) bool {
+	stmt, err := DB.Prepare("select title_ru from cities where title_ru = ?")
+	if err != nil {
+		log.Println(err)
+	}
+	defer stmt.Close()
+	var city string
+	err = stmt.QueryRow(strings.Title(c)).Scan(&city)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false
+		} else {
+			log.Fatal(err)
+			return false
+		}
+	}
+	return true
 }

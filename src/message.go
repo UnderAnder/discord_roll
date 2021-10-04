@@ -17,11 +17,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	rand.Seed(time.Now().Unix())
 
 	// Ignore all messages created by the bot itself
-	// This isn't required in this specific example but it's a good practice.
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	if strings.HasPrefix(m.Content, "!roll") {
+	if strings.HasPrefix(m.Content, "!roll") || strings.HasPrefix(m.Content, "!ролл") {
 		str := strings.Split(m.Content, " ")
 		maxScore := 100
 		quantity := 1
@@ -54,7 +53,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, sb.String())
 	}
 
-	if m.Content == "!bottle" {
+	if m.Content == "!bottle" || m.Content == "!бутылочка" {
 		members, err := s.GuildMembers(m.GuildID, "", 1000)
 		if err != nil {
 			log.Println("error can't get guild members", err)
@@ -67,5 +66,48 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		s.ChannelMessageSend(m.ChannelID, getMessageAuthorNick(m)+" :kiss: "+getMemberNick(randMember))
+	}
+
+	if m.Content == "!score" || m.Content == "!очки" {
+		score := getScore(m.Author.ID)
+
+		s.ChannelMessageSend(m.ChannelID, getMessageAuthorNick(m)+" your score is "+score)
+	}
+
+	if strings.HasPrefix(m.Content, "!city ") || strings.HasPrefix(m.Content, "!город ") || strings.HasPrefix(m.Content, "г ") {
+		str := strings.SplitN(m.Content, " ", 2)
+		city := str[1]
+		exist := cityExist(city)
+		var sb strings.Builder
+
+		sb.WriteString(getMessageAuthorNick(m))
+		if exist {
+			if City == "" {
+				City = city
+				sb.WriteString(" Игра началась следующий город на ")
+				sb.WriteString(strings.ToUpper(getLastChar(City)))
+			} else {
+				lastChar := getLastChar(City)
+				if strings.HasPrefix(city, lastChar) || strings.HasPrefix(city, strings.ToUpper(lastChar)) {
+					addScore(m.Author.ID, 10)
+					City = city
+					lastChar = getLastChar(City)
+					sb.WriteString(" :tada: +10 очков")
+					sb.WriteString(" всего уже ")
+					sb.WriteString(getScore(m.Author.ID))
+					sb.WriteString(" Слудующий город на ")
+					sb.WriteString(strings.ToUpper(lastChar))
+				} else {
+					sb.WriteString(" город должен начинаться на ")
+					sb.WriteString(strings.ToUpper(lastChar))
+				}
+			}
+		} else {
+			sb.WriteString(" город ")
+			sb.WriteString(strings.Title(city))
+			sb.WriteString(" не существует")
+		}
+
+		s.ChannelMessageSend(m.ChannelID, sb.String())
 	}
 }

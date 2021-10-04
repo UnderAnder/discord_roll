@@ -15,6 +15,7 @@ import (
 var (
 	Token string
 	DB    *sql.DB
+	City  string
 )
 
 func init() {
