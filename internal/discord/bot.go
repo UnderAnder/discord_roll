@@ -2,9 +2,6 @@ package discord
 
 import (
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/UnderAnder/discord_roll/internal/repository"
 	"github.com/bwmarrin/discordgo"
@@ -33,15 +30,6 @@ func (b *Bot) Start() error {
 		log.Fatal("error opening connection,", err)
 		return err
 	}
-
-	// Wait here until CTRL-C or other term signal is received.
-	log.Println("Bot is now running. Press CTRL-C to exit.")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-sc
-
-	// Cleanly close down the Discord session.
-	b.bot.Close()
 
 	return nil
 }
