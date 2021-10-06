@@ -6,8 +6,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// const cityGameChan = "894280981098430514" // // REAL
-const cityGameChan = "893415494512680990" // TEST
+const cityGameChan = "894280981098430514"
+const cityGameChanTest = "893415494512680990"
 
 var City string
 
@@ -36,7 +36,7 @@ func (b *Bot) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, nick+" your score is "+score)
 		}
 
-	case m.ChannelID == cityGameChan && (strings.HasPrefix(m.Content, "!city ") || strings.HasPrefix(m.Content, "!город ") || strings.HasPrefix(m.Content, "г ")):
+	case (m.ChannelID == cityGameChan || m.ChannelID == cityGameChanTest) && (strings.HasPrefix(m.Content, "!city ") || strings.HasPrefix(m.Content, "!город ") || strings.HasPrefix(m.Content, "г ")):
 		cityGame := game_cities(b, m)
 		s.ChannelMessageSend(m.ChannelID, cityGame)
 	}

@@ -9,23 +9,36 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+type void struct{}
+
 var (
+	member       void
 	prevCity     string
 	prevAuthorID string
 	prevTime     time.Time
+	prevCities   = make(map[string]struct{})
 )
 
 func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 	str := strings.SplitN(m.Content, " ", 2)
-	city := str[1]
-	exist, _ := b.repository.CityExist(city)
+	city := strings.ToLower(str[1])
+	cityForOutput := strings.ToTitle(city)
+	exists, _ := b.repository.CityExist(city)
 	var sb strings.Builder
 
 	sb.WriteString(getMessageAuthorNick(m))
 
-	if !exist {
+	_, alredyGuessed := prevCities[city]
+	if alredyGuessed {
 		sb.WriteString(" город ")
-		sb.WriteString(city)
+		sb.WriteString(cityForOutput)
+		sb.WriteString(" уже был назван")
+		return sb.String()
+	}
+
+	if !exists {
+		sb.WriteString(" город ")
+		sb.WriteString(cityForOutput)
 		sb.WriteString(" не существует")
 		return sb.String()
 	}
@@ -34,6 +47,7 @@ func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 		prevCity = city
 		prevAuthorID = m.Author.ID
 		prevTime = time.Now()
+		prevCities[city] = member
 		sb.WriteString(" Игра началась, следующий город на ")
 		sb.WriteString(strings.ToUpper(getLastChar(prevCity)))
 		return sb.String()
@@ -41,7 +55,7 @@ func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 
 	lastChar := getLastChar(prevCity)
 
-	if strings.HasPrefix(city, strings.ToLower(lastChar)) {
+	if strings.HasPrefix(city, lastChar) {
 		score := scoreAccrual(m.Author.ID)
 		b.repository.AddScore(m.Author.ID, score)
 
