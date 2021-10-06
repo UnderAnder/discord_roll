@@ -1,4 +1,4 @@
-package game
+package discord
 
 import (
 	"math/rand"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Roll(message, nick string) string {
+func game_roll(message, nick string) string {
 	rand.Seed(time.Now().Unix())
 
 	str := strings.Split(message, " ")

@@ -1,4 +1,4 @@
-package game
+package discord
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func Bottle(s *discordgo.Session, m *discordgo.MessageCreate) (*discordgo.Member, error) {
+func game_bottle(s *discordgo.Session, m *discordgo.MessageCreate) (*discordgo.Member, error) {
 	members, err := s.GuildMembers(m.GuildID, "", 1000)
 	if err != nil {
 		log.Println("error can't get guild members", err)

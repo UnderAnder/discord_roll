@@ -3,9 +3,11 @@ package discord
 import (
 	"strings"
 
-	"github.com/UnderAnder/discord_roll/internal/game"
 	"github.com/bwmarrin/discordgo"
 )
+
+// const cityGameChan = "894280981098430514" // // REAL
+const cityGameChan = "893415494512680990" // TEST
 
 var City string
 
@@ -19,11 +21,11 @@ func (b *Bot) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	switch {
 	case strings.HasPrefix(m.Content, "!roll"), strings.HasPrefix(m.Content, "!ролл"):
-		roll := game.Roll(m.Content, nick)
+		roll := game_roll(m.Content, nick)
 		s.ChannelMessageSend(m.ChannelID, roll)
 
 	case m.Content == "!bottle", m.Content == "!бутылочка":
-		randMember, err := game.Bottle(s, m)
+		randMember, err := game_bottle(s, m)
 		if err == nil {
 			s.ChannelMessageSend(m.ChannelID, nick+" :kiss: "+getMemberNick(randMember))
 		}
@@ -34,15 +36,8 @@ func (b *Bot) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, nick+" your score is "+score)
 		}
 
-	case strings.HasPrefix(m.Content, "!city "), strings.HasPrefix(m.Content, "!город "), strings.HasPrefix(m.Content, "г "):
-		str := strings.SplitN(m.Content, " ", 2)
-		city := str[1]
-		exist, _ := b.repository.CityExist(city)
-		if exist {
-			cityGame, _ := game.City(nick, city)
-			s.ChannelMessageSend(m.ChannelID, cityGame)
-		} else {
-			s.ChannelMessageSend(m.ChannelID, city+" такой город не существует")
-		}
+	case m.ChannelID == cityGameChan && (strings.HasPrefix(m.Content, "!city ") || strings.HasPrefix(m.Content, "!город ") || strings.HasPrefix(m.Content, "г ")):
+		cityGame := game_cities(b, m)
+		s.ChannelMessageSend(m.ChannelID, cityGame)
 	}
 }
