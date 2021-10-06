@@ -1,7 +1,9 @@
 package discord
 
 import (
+	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/bwmarrin/discordgo"
@@ -10,6 +12,7 @@ import (
 var (
 	prevCity     string
 	prevAuthorID string
+	prevTime     time.Time
 )
 
 func game_cities(b *Bot, m *discordgo.MessageCreate) string {
@@ -21,6 +24,7 @@ func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 	sb.WriteString(getMessageAuthorNick(m))
 
 	if !exist {
+		sb.WriteString(" город ")
 		sb.WriteString(city)
 		sb.WriteString(" не существует")
 		return sb.String()
@@ -29,6 +33,7 @@ func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 	if prevCity == "" {
 		prevCity = city
 		prevAuthorID = m.Author.ID
+		prevTime = time.Now()
 		sb.WriteString(" Игра началась, следующий город на ")
 		sb.WriteString(strings.ToUpper(getLastChar(prevCity)))
 		return sb.String()
@@ -37,16 +42,49 @@ func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 	lastChar := getLastChar(prevCity)
 
 	if strings.HasPrefix(city, strings.ToLower(lastChar)) {
+		score := scoreAccrual(m.Author.ID)
+		b.repository.AddScore(m.Author.ID, score)
+
 		prevCity = city
+		prevAuthorID = m.Author.ID
+		prevTime = time.Now()
 		lastChar = getLastChar(prevCity)
 
-		sb.WriteString("Верно! Слудующий город на ")
+		sb.WriteString("  :tada: +")
+		sb.WriteString(strconv.Itoa(score))
+		sb.WriteString(" Слудующий город на ")
 	} else {
 		sb.WriteString(" город должен начинаться на ")
 	}
 	sb.WriteString(strings.ToUpper(lastChar))
 
 	return sb.String()
+}
+
+func scoreAccrual(id string) int {
+	var score int
+
+	switch id {
+	case prevAuthorID:
+		score += 1
+	default:
+		score += 6
+	}
+
+	switch {
+	case time.Since(prevTime) < 3000000000:
+		score += 6
+	case time.Since(prevTime) < 5000000000:
+		score += 4
+	case time.Since(prevTime) < 10000000000:
+		score += 3
+	case time.Since(prevTime) < 15000000000:
+		score += 2
+	default:
+		score += 1
+	}
+
+	return score
 }
 
 func getLastChar(s string) string {
