@@ -3,7 +3,6 @@ package sqlite
 import (
 	"database/sql"
 	"log"
-	"strconv"
 	"strings"
 )
 
@@ -38,20 +37,20 @@ func (r *Repository) AddScore(discordID string, score int) error {
 	return nil
 }
 
-func (r *Repository) GetScore(discordID string) (string, error) {
+func (r *Repository) GetScore(discordID string) (int, error) {
 	stmt, err := r.db.Prepare("select score from users where discord_id = ?")
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return 0, err
 	}
 	defer stmt.Close()
 	var score int
 	err = stmt.QueryRow(discordID).Scan(&score)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return 0, err
 	}
-	return strconv.Itoa(score), nil
+	return score, nil
 }
 
 func (r *Repository) CityExist(c string) (bool, error) {

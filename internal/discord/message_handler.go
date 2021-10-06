@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"log"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -26,18 +28,31 @@ func (b *Bot) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	case m.Content == "!bottle", m.Content == "!бутылочка":
 		randMember, err := game_bottle(s, m)
-		if err == nil {
-			s.ChannelMessageSend(m.ChannelID, nick+" :kiss: "+getMemberNick(randMember))
+		if err != nil {
+			log.Println(err)
+			break
 		}
+		s.ChannelMessageSend(m.ChannelID, nick+" :kiss: "+getMemberNick(randMember))
 
 	case m.Content == "!score", m.Content == "!очки":
 		score, err := b.repository.GetScore(m.Author.ID)
-		if err == nil {
-			s.ChannelMessageSend(m.ChannelID, nick+" your score is "+score)
+		if err != nil {
+			log.Println(err)
+			break
 		}
+		s.ChannelMessageSend(m.ChannelID, nick+" у тебя "+strconv.Itoa(score)+":tamale:")
 
 	case (m.ChannelID == cityGameChan || m.ChannelID == cityGameChanTest) && (strings.HasPrefix(m.Content, "!city ") || strings.HasPrefix(m.Content, "!город ") || strings.HasPrefix(m.Content, "г ")):
-		cityGame := game_cities(b, m)
-		s.ChannelMessageSend(m.ChannelID, cityGame)
+		citiesGame := game_cities(b, m)
+		s.ChannelMessageSend(m.ChannelID, citiesGame)
+
+	case strings.HasPrefix(m.Content, "!bet "), strings.HasPrefix(m.Content, "!ставка "):
+		betGame, err := game_bet(b, m)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		s.ChannelMessageSend(m.ChannelID, betGame)
+
 	}
 }
