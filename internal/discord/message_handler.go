@@ -54,5 +54,12 @@ func (b *Bot) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		s.ChannelMessageSend(m.ChannelID, betGame)
 
+	case m.Content == "!top":
+		top, err := leaderboard(b, s)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		s.ChannelMessageSend(m.ChannelID, top)
 	}
 }

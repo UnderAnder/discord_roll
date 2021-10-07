@@ -10,6 +10,11 @@ type Repository struct {
 	db *sql.DB
 }
 
+type User struct {
+	Discord_id string
+	Score      int
+}
+
 // constructor
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
@@ -71,4 +76,28 @@ func (r *Repository) CityExist(c string) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+func (r *Repository) GetTopUsersByScore(limit int) ([]User, error) {
+	stmt := `select discord_id, score from users order by score desc limit ?`
+
+	rows, err := r.db.Query(stmt, limit)
+	if err != nil {
+		log.Println(err)
+		return []User{}, err
+	}
+	defer rows.Close()
+
+	var result []User
+
+	for rows.Next() {
+		item := User{}
+		err := rows.Scan(&item.Discord_id, &item.Score)
+		if err != nil {
+			log.Println(err)
+			return []User{}, err
+		}
+		result = append(result, item)
+	}
+	return result, nil
 }

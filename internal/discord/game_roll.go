@@ -4,12 +4,9 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func game_roll(message, nick string) string {
-	rand.Seed(time.Now().Unix())
-
 	str := strings.Split(message, " ")
 	maxScore := 100
 	quantity := 1

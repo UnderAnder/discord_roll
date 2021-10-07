@@ -4,7 +4,6 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -29,7 +28,6 @@ func game_bet(b *Bot, m *discordgo.MessageCreate) (string, error) {
 		return "", err
 	}
 	scoreForOutput := strconv.Itoa(score)
-	rand.Seed(time.Now().Unix())
 
 	if bet > score {
 		sb.WriteString(" ставка не может превышать количество ")

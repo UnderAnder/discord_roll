@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"flag"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/UnderAnder/discord_roll/internal/discord"
 	"github.com/UnderAnder/discord_roll/internal/repository/sqlite"
@@ -22,6 +24,8 @@ var (
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.Parse()
+	// We want the seed to change on every launch
+	rand.Seed(time.Now().Unix())
 }
 
 func main() {
