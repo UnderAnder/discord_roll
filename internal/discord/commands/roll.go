@@ -1,13 +1,16 @@
-package discord
+package commands
 
 import (
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
+
+	"github.com/bwmarrin/discordgo"
 )
 
-func game_roll(message, nick string) string {
-	str := strings.Split(message, " ")
+func (h *Handler) roll(s *discordgo.Session, m *discordgo.MessageCreate) {
+	str := strings.Fields(m.Content)
 	maxScore := 100
 	quantity := 1
 	var sb strings.Builder
@@ -31,7 +34,7 @@ func game_roll(message, nick string) string {
 	}
 
 	// build output string
-	sb.WriteString(nick)
+	sb.WriteString(getMessageAuthorNick(m))
 	sb.WriteString(" (1-")
 	sb.WriteString(strconv.Itoa(maxScore))
 	sb.WriteString(") ")
@@ -40,5 +43,7 @@ func game_roll(message, nick string) string {
 		sb.WriteString(strconv.Itoa(rand.Intn(maxScore) + 1))
 	}
 
-	return sb.String()
+	if _, err := s.ChannelMessageSend(m.ChannelID, sb.String()); err != nil {
+		log.Println(err)
+	}
 }

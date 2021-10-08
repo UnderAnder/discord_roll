@@ -2,48 +2,77 @@ package sqlite
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"strings"
 )
 
-type Repository struct {
-	db *sql.DB
+type Sqlite struct {
+	db       *sql.DB
+	location string
 }
 
 type User struct {
-	Discord_id string
-	Score      int
+	DiscordID string
+	Score     int
 }
 
-// constructor
-func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db}
+// NewSqlite builds and returns a pointer to a Sqlite repository implementation
+func NewSqlite(location string) (*Sqlite, error) {
+	return &Sqlite{location: location}, nil
 }
 
-func (r *Repository) AddScore(discordID string, score int) error {
-	tx, err := r.db.Begin()
+// Close closes the connection to sqlite.
+func (s *Sqlite) Close() error {
+	log.Println("Closing sqlite db...")
+	if s.db == nil {
+		log.Println("DB already closed, nothing to do.")
+		return nil
+	}
+	if err := s.db.Close(); err != nil {
+		return err
+	}
+	log.Println("Closed sqlite db.")
+	return nil
+}
+
+// Open opens a connection to sqlite.
+func (s *Sqlite) Open() error {
+	log.Printf("Opening sqlite db at '%s'...", s.location)
+	db, err := sql.Open("sqlite3", s.location)
 	if err != nil {
-		log.Println(err)
+		return err
+	}
+	s.db = db
+	log.Println("Opened sqlite db.")
+	return nil
+}
+
+func (s *Sqlite) AddScore(discordID string, score int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
 	}
 	stmt, err := tx.Prepare("insert into users(discord_id, score) values(?, ?) ON CONFLICT(discord_id) DO UPDATE SET score=score+?;")
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(discordID, score, score)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (r *Repository) GetScore(discordID string) (int, error) {
-	stmt, err := r.db.Prepare("select score from users where discord_id = ?")
+func (s *Sqlite) GetScore(discordID string) (int, error) {
+	stmt, err := s.db.Prepare("select score from users where discord_id = ?")
 	if err != nil {
 		log.Println(err)
 		return 0, err
@@ -58,8 +87,8 @@ func (r *Repository) GetScore(discordID string) (int, error) {
 	return score, nil
 }
 
-func (r *Repository) CityExist(c string) (bool, error) {
-	stmt, err := r.db.Prepare("select title_ru from cities where title_ru = ?")
+func (s *Sqlite) CityExist(c string) (bool, error) {
+	stmt, err := s.db.Prepare("select title_ru from cities where title_ru = ?")
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -68,20 +97,19 @@ func (r *Repository) CityExist(c string) (bool, error) {
 	var city string
 	err = stmt.QueryRow(strings.Title(c)).Scan(&city)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
-		} else {
-			log.Fatal(err)
-			return false, err
 		}
+		log.Fatal(err)
+		return false, err
 	}
 	return true, nil
 }
 
-func (r *Repository) GetTopUsersByScore(limit int) ([]User, error) {
+func (s *Sqlite) GetTopUsersByScore(limit int) ([]User, error) {
 	stmt := `select discord_id, score from users order by score desc limit ?`
 
-	rows, err := r.db.Query(stmt, limit)
+	rows, err := s.db.Query(stmt, limit)
 	if err != nil {
 		log.Println(err)
 		return []User{}, err
@@ -92,7 +120,7 @@ func (r *Repository) GetTopUsersByScore(limit int) ([]User, error) {
 
 	for rows.Next() {
 		item := User{}
-		err := rows.Scan(&item.Discord_id, &item.Score)
+		err := rows.Scan(&item.DiscordID, &item.Score)
 		if err != nil {
 			log.Println(err)
 			return []User{}, err

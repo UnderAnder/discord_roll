@@ -1,6 +1,7 @@
-package discord
+package commands
 
 import (
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -8,7 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func game_bet(b *Bot, m *discordgo.MessageCreate) (string, error) {
+func (h *Handler) bet(s *discordgo.Session, m *discordgo.MessageCreate) {
 	var scoreSign = ":tamale:"
 	var newScore int
 	var sb strings.Builder
@@ -17,15 +18,21 @@ func game_bet(b *Bot, m *discordgo.MessageCreate) (string, error) {
 	str := strings.Split(m.Content, " ")
 	if len(str) < 2 {
 		sb.WriteString(" укажи ставку")
-		return sb.String(), nil
+		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
+		if err != nil {
+			log.Println(err)
+		}
+		return
 	}
 	bet, err := strconv.Atoi(str[1])
 	if err != nil {
-		return "", err
+		log.Println(err)
+		return
 	}
-	score, err := b.repository.GetScore(m.Author.ID)
+	score, err := h.repository.GetScore(m.Author.ID)
 	if err != nil {
-		return "", err
+		log.Println(err)
+		return
 	}
 	scoreForOutput := strconv.Itoa(score)
 
@@ -35,7 +42,11 @@ func game_bet(b *Bot, m *discordgo.MessageCreate) (string, error) {
 		sb.WriteString(" Всего у тебя ")
 		sb.WriteString(scoreForOutput)
 		sb.WriteString(scoreSign)
-		return sb.String(), nil
+		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
+		if err != nil {
+			log.Println(err)
+		}
+		return
 	}
 
 	roll := rand.Intn(100)
@@ -43,19 +54,26 @@ func game_bet(b *Bot, m *discordgo.MessageCreate) (string, error) {
 	sb.WriteString(" сделал ставку ")
 	sb.WriteString(str[1])
 	sb.WriteString(scoreSign)
-	if roll < 51 {
+	if roll < 52 {
 		sb.WriteString(" и проиграл! :stuck_out_tongue_closed_eyes: ")
-		b.repository.AddScore(m.Author.ID, -bet)
+		err := h.repository.AddScore(m.Author.ID, -bet)
+		if err != nil {
+			return
+		}
 		newScore = score - bet
-
 	} else {
 		sb.WriteString(" и выйграл! :partying_face: ")
-		b.repository.AddScore(m.Author.ID, bet)
+		err := h.repository.AddScore(m.Author.ID, bet)
+		if err != nil {
+			return
+		}
 		newScore = score + bet
 	}
 	sb.WriteString(" Теперь у тебя ")
 	sb.WriteString(strconv.Itoa(newScore))
 	sb.WriteString(scoreSign)
 
-	return sb.String(), nil
+	if _, err := s.ChannelMessageSend(m.ChannelID, sb.String()); err != nil {
+		log.Println(err)
+	}
 }

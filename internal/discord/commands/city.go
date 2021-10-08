@@ -1,6 +1,7 @@
-package discord
+package commands
 
 import (
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -8,6 +9,9 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 )
+
+const cityGameChan = "894280981098430514"
+const cityGameChanTest = "893415494512680990"
 
 type void struct{}
 
@@ -19,28 +23,42 @@ var (
 	prevCities   = make(map[string]struct{})
 )
 
-func game_cities(b *Bot, m *discordgo.MessageCreate) string {
+func (h *Handler) city(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.ChannelID != cityGameChan || m.ChannelID != cityGameChanTest {
+		return
+	}
+
 	str := strings.SplitN(m.Content, " ", 2)
 	city := strings.ToLower(str[1])
 	cityForOutput := strings.ToTitle(city)
-	exists, _ := b.repository.CityExist(city)
+	exists, _ := h.repository.CityExist(city)
 	var sb strings.Builder
 
 	sb.WriteString(getMessageAuthorNick(m))
 
-	_, alredyGuessed := prevCities[city]
-	if alredyGuessed {
+	_, alreadyGuessed := prevCities[city]
+	if alreadyGuessed {
 		sb.WriteString(" город ")
 		sb.WriteString(cityForOutput)
 		sb.WriteString(" уже был назван")
-		return sb.String()
+		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
 	}
 
 	if !exists {
 		sb.WriteString(" город ")
 		sb.WriteString(cityForOutput)
 		sb.WriteString(" не существует")
-		return sb.String()
+		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
 	}
 
 	if prevCity == "" {
@@ -50,14 +68,23 @@ func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 		prevCities[city] = member
 		sb.WriteString(" Игра началась, следующий город на ")
 		sb.WriteString(strings.ToUpper(getLastChar(prevCity)))
-		return sb.String()
+		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
 	}
 
 	lastChar := getLastChar(prevCity)
 
 	if strings.HasPrefix(city, lastChar) {
 		score := scoreAccrual(m.Author.ID)
-		b.repository.AddScore(m.Author.ID, score)
+		err := h.repository.AddScore(m.Author.ID, score)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
 		prevCity = city
 		prevAuthorID = m.Author.ID
@@ -72,7 +99,9 @@ func game_cities(b *Bot, m *discordgo.MessageCreate) string {
 	}
 	sb.WriteString(strings.ToUpper(lastChar))
 
-	return sb.String()
+	if _, err := s.ChannelMessageSend(m.ChannelID, sb.String()); err != nil {
+		log.Println(err)
+	}
 }
 
 func scoreAccrual(id string) int {
@@ -80,7 +109,7 @@ func scoreAccrual(id string) int {
 
 	switch id {
 	case prevAuthorID:
-		score += 1
+		score++
 	default:
 		score += 6
 	}
@@ -95,7 +124,7 @@ func scoreAccrual(id string) int {
 	case time.Since(prevTime) < 15000000000:
 		score += 2
 	default:
-		score += 1
+		score++
 	}
 
 	return score
