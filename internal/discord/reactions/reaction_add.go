@@ -3,13 +3,10 @@ package reactions
 import (
 	"github.com/UnderAnder/discord_roll/internal/repository"
 	"github.com/bwmarrin/discordgo"
-	"log"
 )
 
 var duelMsg *discordgo.Message
 var opponent *discordgo.User
-
-type handler func(*discordgo.Session, *discordgo.MessageReactionAdd)
 
 type Handler struct {
 	repository repository.Repository
@@ -21,22 +18,30 @@ func NewHandler(r repository.Repository, e chan string) *Handler {
 }
 
 func (h *Handler) HandleAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
-	log.Println("emojiID: " + r.Emoji.ID + "emojName: " + r.Emoji.Name + "emojUser: ")
+	h.rollDuel(s, r)
+}
+
+func (h *Handler) rollDuel(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	if r.MessageReaction.UserID == s.State.User.ID && r.MessageReaction.Emoji.Name == "👍" {
 		duelMsg, _ = s.ChannelMessage(r.ChannelID, r.MessageID)
+		// expire previous game
+		if opponent != nil {
+			h.eventChan <- "reject"
+		}
+		if len(duelMsg.Mentions) != 1 {
+			return
+		}
 		opponent = duelMsg.Mentions[0]
-		log.Println("DBUG: " + opponent.ID)
 	}
-
 	if opponent == nil {
 		return
 	}
 	if r.Emoji.Name == "🚫" && r.MessageReaction.UserID == opponent.ID {
-		log.Println("Отказ")
+		opponent = nil
 		h.eventChan <- "reject"
 	}
 	if r.Emoji.Name == "🎲" && r.MessageReaction.UserID == opponent.ID {
-		log.Println("Запустить ролл")
+		opponent = nil
 		h.eventChan <- "roll"
 	}
 }
