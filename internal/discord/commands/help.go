@@ -13,6 +13,7 @@ func (h *Handler) help(s *discordgo.Session, m *discordgo.MessageCreate) {
 		"- `!bottle (!бутылочка)` Целуйтесь или бан!\n" +
 		"- `!city (!город, !г)` Игра в города\n" +
 		"- `!top (!топ, !leaderboard)` Список лидеров\n" +
+		"- `!score (!очки)` Сколько у тебя очков\n" +
 		"- `!help (!помощь)` это сообщение"
 
 	msg := discordgo.MessageEmbed{

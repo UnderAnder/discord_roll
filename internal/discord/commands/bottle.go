@@ -14,9 +14,9 @@ func (h *Handler) bottle(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	randMember := members[rand.Intn(len(members))]
+	randMember := members[rand.Intn(len(members))] //nolint:gosec
 	for randMember.User.ID == m.Author.ID {
-		randMember = members[rand.Intn(len(members))]
+		randMember = members[rand.Intn(len(members))] //nolint:gosec
 	}
 
 	if _, err := s.ChannelMessageSend(m.ChannelID, getMessageAuthorNick(m)+" :kiss: "+getMemberNick(randMember)); err != nil {

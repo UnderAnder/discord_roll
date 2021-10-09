@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/UnderAnder/discord_roll/internal/discord/commands"
+	"github.com/UnderAnder/discord_roll/internal/discord/reactions"
 	"github.com/UnderAnder/discord_roll/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
@@ -31,10 +32,14 @@ func NewBot(token string) (*Bot, error) {
 		log.Fatal("error creating Discord session,", err)
 		return nil, err
 	}
+	// Create Event chan
+	events := make(chan string)
 
-	commandsHandler := commands.NewHandler(db)
+	commandsHandler := commands.NewHandler(db, events)
+	reactionsHandler := reactions.NewHandler(db, events)
 
 	dg.AddHandler(commandsHandler.Handle)
+	dg.AddHandler(reactionsHandler.HandleAdd)
 
 	return &Bot{
 		discord:    dg,

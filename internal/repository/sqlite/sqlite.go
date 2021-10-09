@@ -100,7 +100,7 @@ func (s *Sqlite) CityExist(c string) (bool, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		log.Fatal(err)
+		log.Panic(err)
 		return false, err
 	}
 	return true, nil

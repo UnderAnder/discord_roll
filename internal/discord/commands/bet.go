@@ -49,7 +49,7 @@ func (h *Handler) bet(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	roll := rand.Intn(100)
+	roll := rand.Intn(100) //nolint:gosec
 
 	sb.WriteString(" сделал ставку ")
 	sb.WriteString(str[1])
