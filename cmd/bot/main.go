@@ -12,18 +12,20 @@ import (
 
 // Token variable used for command line parameter
 var (
-	Token string
+	Token  string
+	DBPath string
 )
 
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
+	flag.StringVar(&DBPath, "db", "", "Path to DB")
 	flag.Parse()
 	// We want the seed to change on every launch
 	rand.Seed(time.Now().Unix())
 }
 
 func main() {
-	discordBot, err := discord.NewBot(Token)
+	discordBot, err := discord.NewBot(Token, DBPath)
 	if err != nil {
 		log.Fatal(err)
 	}
