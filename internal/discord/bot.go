@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/UnderAnder/discord_roll/internal/discord/commands"
 	"github.com/UnderAnder/discord_roll/internal/discord/reactions"
-	"github.com/UnderAnder/discord_roll/internal/discord/slashcommands"
 	"github.com/UnderAnder/discord_roll/internal/repository"
 	"github.com/bwmarrin/discordgo"
 	"log"
@@ -32,20 +31,18 @@ func NewBot(token, dbPath string) (*Bot, error) {
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
-		log.Fatal("error creating Discord session,", err)
+		log.Panic("error creating Discord session,", err)
 		return nil, err
 	}
 
 	// Create Event chans
 	events := make(chan string)
 
-	// Register text commands handler
 	commandsHandler := commands.NewHandler(db, events)
-	dg.AddHandler(commandsHandler.Handle)
-
+	// Register text commands handler
+	dg.AddHandler(commandsHandler.HandleMessage)
 	// Register slash commands handler
-	slashHandler := slashcommands.NewHandler(db, events)
-	dg.AddHandler(slashHandler.Handle)
+	dg.AddHandler(commandsHandler.HandleInteraction)
 
 	// Register reactionAdd handler
 	reactionsHandler := reactions.NewHandler(db, events)
@@ -87,7 +84,7 @@ func (b *Bot) Start() error {
 	log.Println("Connection to Discord established.")
 
 	// Create slash commands in discord
-	for _, v := range slashcommands.Commands {
+	for _, v := range commands.SlashCommands {
 		_, err := b.discord.ApplicationCommandCreate(b.discord.State.User.ID, GuildID, v)
 		log.Printf("Create command %v\n", v.Name)
 		if err != nil {

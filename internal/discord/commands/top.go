@@ -10,34 +10,66 @@ import (
 
 const limit = 10
 
-func (h *Handler) top(s *discordgo.Session, m *discordgo.MessageCreate) {
+// topMessage Print leaderboard to the channel trough text command
+func (h *Handler) topMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	top, err := h.top(s)
+	if err != nil {
+		return
+	}
+
+	msg := discordgo.MessageEmbed{
+		Description: top,
+		Color:       0x006969, // 96 96
+	}
+	if _, err := s.ChannelMessageSendEmbed(m.ChannelID, &msg); err != nil {
+		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
+	}
+}
+
+// topSlash Print leaderboard to the channel trough slash command
+func (h *Handler) topSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	top, err := h.top(s)
+	if err != nil {
+		return
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: top,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
+		return
+	}
+}
+
+// top Return leaderboard from DB as string
+func (h *Handler) top(s *discordgo.Session) (string, error) {
 	var sb strings.Builder
 
 	top, err := h.repository.GetTopUsersByScore(limit)
 	if err != nil {
 		log.Println(err)
-		return
+		return "", err
 	}
+
 	for i, v := range top {
 		user, err := s.User(v.DiscordID)
 		if err != nil {
 			log.Println(err)
-			return
+			return "", err
 		}
-		userName := user.Username
 
+		sb.WriteString("> ")
 		sb.WriteString(strconv.Itoa(i + 1))
 		sb.WriteString(". ")
-		sb.WriteString(userName)
+		sb.WriteString(user.Username)
 		sb.WriteString(" ")
 		sb.WriteString(strconv.Itoa(v.Score))
 		sb.WriteString("\n")
 	}
-	msg := discordgo.MessageEmbed{
-		Description: sb.String(),
-		Color:       0x006969, // 96 96
-	}
-	if _, err := s.ChannelMessageSendEmbed(m.ChannelID, &msg); err != nil {
-		log.Println(err)
-	}
+
+	return sb.String(), err
 }

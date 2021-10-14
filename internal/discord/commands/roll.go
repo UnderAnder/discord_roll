@@ -9,147 +9,87 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func (h *Handler) roll(s *discordgo.Session, m *discordgo.MessageCreate) {
+// rollMessage Generate a random numbers for the user to the channel trough text command
+func (h *Handler) rollMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	var msg string
+	var err error
+	// if 0 default values will use
+	var maxRoll = 0
+	var quantity = 0
+
 	str := strings.Fields(m.Content)
-	maxScore := 100
-	quantity := 1
 
-	if len(str) == 4 && str[1] == "duel" {
-		h.duelRoll(s, m, str)
-		return
-	}
-
+	// convert parameters if exists
 	switch len(str) {
-	case 1:
-		break
 	case 3:
-		var err error
 		quantity, err = strconv.Atoi(str[2])
 		if err != nil {
-			quantity = 1
+			return
 		}
 		fallthrough
 	case 2:
-		var err error
-		maxScore, err = strconv.Atoi(str[1])
+		maxRoll, err = strconv.Atoi(str[1])
 		if err != nil {
-			maxScore = 100
+			return
 		}
+	default:
+		break
+	}
+
+	msg = h.roll(m.Author.Username, maxRoll, quantity)
+
+	if _, err := s.ChannelMessageSend(m.ChannelID, msg); err != nil {
+		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
+	}
+}
+
+// roll Return a random numbers as string
+func (h *Handler) roll(userName string, maxRoll, quantity int) string {
+	// default values
+	if maxRoll == 0 {
+		maxRoll = 100
+	}
+	if quantity == 0 {
+		quantity = 1
 	}
 
 	// build output string
 	var sb strings.Builder
-	sb.WriteString(getMessageAuthorNick(m))
+	sb.WriteString(userName)
 	sb.WriteString(" (1-")
-	sb.WriteString(strconv.Itoa(maxScore))
+	sb.WriteString(strconv.Itoa(maxRoll))
 	sb.WriteString(") ")
 	for i := 0; i < quantity; i++ {
 		sb.WriteString(" :game_die:")
-		sb.WriteString(strconv.Itoa(rand.Intn(maxScore) + 1)) //nolint:gosec
+		sb.WriteString(strconv.Itoa(rand.Intn(maxRoll) + 1)) //nolint:gosec
 	}
-
-	if _, err := s.ChannelMessageSend(m.ChannelID, sb.String()); err != nil {
-		log.Println(err)
-	}
+	return sb.String()
 }
 
-func (h *Handler) duelRoll(s *discordgo.Session, m *discordgo.MessageCreate, str []string) {
-	var sb strings.Builder
-	if len(m.Mentions) != 1 {
-		_, err := s.ChannelMessageSend(m.ChannelID, "Оппонент не найден, упомяни участника через @")
-		if err != nil {
-			return
-		}
-		return
+// rollSlash Generate  a random numbers for the user to the channel trough slash command
+func (h *Handler) rollSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// if 0 default values will use
+	var maxScore = 0
+	var quantity = 0
+
+	// Here we need to convert raw interface{} value to wanted type.
+	if len(i.ApplicationCommandData().Options) >= 1 {
+		maxScore = int(i.ApplicationCommandData().Options[0].IntValue())
+	}
+	if len(i.ApplicationCommandData().Options) == 2 {
+		quantity = int(i.ApplicationCommandData().Options[1].IntValue())
 	}
 
-	opponent := m.Mentions[0]
+	msg := h.roll(i.Member.User.Username, maxScore, quantity)
 
-	bet, err := strconv.Atoi(str[3])
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		// Ignore type for now, we'll discuss them in "responses" part
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: msg,
+		},
+	})
 	if err != nil {
-		log.Println(err)
-		return
-	}
-	if bet < 0 {
-		_, _ = s.ChannelMessageSend(m.ChannelID, "Ставка не может быть отрицательной")
-		return
-	}
-
-	authorScore, _ := h.repository.GetScore(m.Author.ID)
-	opponentScore, _ := h.repository.GetScore(opponent.ID)
-	if bet > authorScore {
-		sb.WriteString("Ставка слишком высока, у тебя всего ")
-		sb.WriteString(strconv.Itoa(authorScore))
-		if _, err := s.ChannelMessageSend(m.ChannelID, sb.String()); err != nil {
-			log.Println(err)
-		}
-		return
-	}
-	if bet > opponentScore {
-		sb.WriteString("У твоего оппонента недостаточно очков, ставка не должна превышать ")
-		sb.WriteString(strconv.Itoa(opponentScore))
-		if _, err := s.ChannelMessageSend(m.ChannelID, sb.String()); err != nil {
-			log.Println(err)
-		}
-		return
-	}
-
-	sb.WriteString(opponent.Mention())
-	sb.WriteString(" тебя вызвали на дуэль, нажми на :game_die: чтобы принять, или :no_entry_sign: чтобы отказаться")
-	message, err := s.ChannelMessageSend(m.ChannelID, sb.String())
-	if err != nil {
-		log.Println(err)
-	}
-	err = s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
-	if err != nil {
-		return
-	}
-	err = s.MessageReactionAdd(message.ChannelID, message.ID, "🎲")
-	if err != nil {
-		return
-	}
-	err = s.MessageReactionAdd(message.ChannelID, message.ID, "🚫")
-	if err != nil {
-		return
-	}
-
-	accept := <-h.eventChan
-	if accept != "roll" {
-		_, _ = s.ChannelMessageEdit(message.ChannelID, message.ID, opponent.Username+" отказался")
-		return
-	}
-
-	authorRoll := rand.Intn(100) + 1   //nolint:gosec
-	opponentRoll := rand.Intn(100) + 1 //nolint:gosec
-	sb.Reset()
-	sb.WriteString(getMessageAuthorNick(m) + " выбрасывает " + strconv.Itoa(authorRoll) + "\n")
-	sb.WriteString(opponent.Username + " выбрасывает " + strconv.Itoa(opponentRoll) + "\n")
-	if authorRoll == opponentRoll {
-		sb.WriteString("Ваши силы равны, оба остались при своём")
-	} else if authorRoll > opponentRoll {
-		err := h.repository.AddScore(m.Author.ID, bet)
-		if err != nil {
-			return
-		}
-		err = h.repository.AddScore(opponent.ID, -bet)
-		if err != nil {
-			return
-		}
-		sb.WriteString(getMessageAuthorNick(m) + " победил и получает " + strconv.Itoa(bet) + " очков соперника!")
-	} else {
-		err := h.repository.AddScore(m.Author.ID, -bet)
-		if err != nil {
-			return
-		}
-		err = h.repository.AddScore(opponent.ID, bet)
-		if err != nil {
-			return
-		}
-		sb.WriteString(opponent.Username + " победил и получает" + strconv.Itoa(bet) + " очков соперника!")
-	}
-
-	_, err = s.ChannelMessageSend(m.ChannelID, sb.String())
-	if err != nil {
-		log.Println(err)
+		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
 	}
 }
