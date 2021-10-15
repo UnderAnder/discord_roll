@@ -12,6 +12,7 @@ const (
 	CommandKeyword = "!"
 )
 
+// SlashCommands list of slash commands for registration on Discord
 var SlashCommands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "top",
@@ -39,8 +40,33 @@ var SlashCommands = []*discordgo.ApplicationCommand{
 			},
 		},
 	},
+	{
+		Name:        "bet",
+		Description: "Make a bet",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Name:        "bet",
+				Description: "bet",
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:        "city",
+		Description: "guess the city",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "city",
+				Description: "city",
+				Required:    true,
+			},
+		},
+	},
 }
 
+// list of text commands for use on a guild channels
 var (
 	helpCommand  = map[string]bool{"help": true, "рудз": true, "помощь": true}
 	rollCommand  = map[string]bool{"roll": true, "кщдд": true, "ролл": true}
@@ -62,6 +88,7 @@ func NewHandler(r repository.Repository, e chan string) *Handler {
 	return &Handler{repository: r, eventChan: e}
 }
 
+// HandleMessage text command handler
 func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -88,9 +115,9 @@ func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate
 	case rollCommand[command]:
 		handle = h.rollMessage
 	case cityCommand[command]:
-		handle = h.city
+		handle = h.cityMessage
 	case betCommand[command]:
-		handle = h.bet
+		handle = h.betMessage
 	case topCommand[command]:
 		handle = h.topMessage
 	case scoreCommand[command]:
@@ -104,6 +131,7 @@ func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate
 	handle(s, m)
 }
 
+// HandleInteraction slash commands handler
 func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	log.Printf("Received slash command: %v", i.ApplicationCommandData().Name)
 
@@ -116,6 +144,10 @@ func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.Interacti
 		handle = h.scoreSlash
 	case "roll":
 		handle = h.rollSlash
+	case "bet":
+		handle = h.betSlash
+	case "city":
+		handle = h.citySlash
 	default:
 		log.Panicln("UNREGISTRED COMMAND")
 		return
