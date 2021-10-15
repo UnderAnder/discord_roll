@@ -9,7 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// rollMessage Generate a random numbers for the user to the channel trough text command
+// rollMessage Output a random numbers on the guild channel in response to the text command
 func (h *Handler) rollMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	var msg string
 	var err error
@@ -43,30 +43,7 @@ func (h *Handler) rollMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 	}
 }
 
-// roll Return a random numbers as string
-func (h *Handler) roll(userName string, maxRoll, quantity int) string {
-	// default values
-	if maxRoll == 0 {
-		maxRoll = 100
-	}
-	if quantity == 0 {
-		quantity = 1
-	}
-
-	// build output string
-	var sb strings.Builder
-	sb.WriteString(userName)
-	sb.WriteString(" (1-")
-	sb.WriteString(strconv.Itoa(maxRoll))
-	sb.WriteString(") ")
-	for i := 0; i < quantity; i++ {
-		sb.WriteString(" :game_die:")
-		sb.WriteString(strconv.Itoa(rand.Intn(maxRoll) + 1)) //nolint:gosec
-	}
-	return sb.String()
-}
-
-// rollSlash Generate  a random numbers for the user to the channel trough slash command
+// rollSlash Output a random numbers on the guild channel in response to the slash command
 func (h *Handler) rollSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// if 0 default values will use
 	var maxScore = 0
@@ -92,4 +69,27 @@ func (h *Handler) rollSlash(s *discordgo.Session, i *discordgo.InteractionCreate
 	if err != nil {
 		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
 	}
+}
+
+// roll Return a random numbers as string
+func (h *Handler) roll(userName string, maxRoll, quantity int) string {
+	// default values
+	if maxRoll == 0 {
+		maxRoll = 100
+	}
+	if quantity == 0 {
+		quantity = 1
+	}
+
+	// build output string
+	var sb strings.Builder
+	sb.WriteString(userName)
+	sb.WriteString(" (1-")
+	sb.WriteString(strconv.Itoa(maxRoll))
+	sb.WriteString(") ")
+	for i := 0; i < quantity; i++ {
+		sb.WriteString(" :game_die:")
+		sb.WriteString(strconv.Itoa(rand.Intn(maxRoll) + 1)) //nolint:gosec
+	}
+	return sb.String()
 }

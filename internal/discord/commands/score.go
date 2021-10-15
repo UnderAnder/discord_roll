@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// scoreMessage Print user score to the channel trough text command
+// scoreMessage Print user score to the guild channel in response to the text command
 func (h *Handler) scoreMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	score, err := h.score(m.Author.ID)
 	if err != nil {
@@ -17,8 +17,11 @@ func (h *Handler) scoreMessage(s *discordgo.Session, m *discordgo.MessageCreate)
 	}
 }
 
-// scoreSlash Print user score to the channel trough slash command
+// scoreSlash Print user score to the guild channel in response to the slash command
 func (h *Handler) scoreSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if i.Member == nil {
+		return
+	}
 	score, err := h.score(i.Member.User.ID)
 	if err != nil {
 		return
@@ -35,7 +38,7 @@ func (h *Handler) scoreSlash(s *discordgo.Session, i *discordgo.InteractionCreat
 	}
 }
 
-// score Returns user score from db
+// score Return user score from DB as string
 func (h *Handler) score(userID string) (string, error) {
 	score, err := h.repository.GetScore(userID)
 	if err != nil {
