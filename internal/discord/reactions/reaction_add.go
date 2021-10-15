@@ -22,7 +22,7 @@ func (h *Handler) HandleAdd(s *discordgo.Session, r *discordgo.MessageReactionAd
 }
 
 func (h *Handler) rollDuel(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
-	if r.MessageReaction.UserID == s.State.User.ID && r.MessageReaction.Emoji.Name == "👍" {
+	if r.MessageReaction.UserID == s.State.User.ID && r.MessageReaction.Emoji.Name == "🎲" {
 		duelMsg, _ = s.ChannelMessage(r.ChannelID, r.MessageID)
 		// expire previous game
 		if opponent != nil {

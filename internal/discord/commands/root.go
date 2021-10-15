@@ -41,6 +41,24 @@ var SlashCommands = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
+		Name:        "duel",
+		Description: "make roll against opponent",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionUser,
+				Name:        "opponent",
+				Description: "opponent",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Name:        "bet",
+				Description: "bet",
+				Required:    true,
+			},
+		},
+	},
+	{
 		Name:        "bet",
 		Description: "Make a bet",
 		Options: []*discordgo.ApplicationCommandOption{
@@ -70,6 +88,7 @@ var SlashCommands = []*discordgo.ApplicationCommand{
 var (
 	helpCommand  = map[string]bool{"help": true, "рудз": true, "помощь": true}
 	rollCommand  = map[string]bool{"roll": true, "кщдд": true, "ролл": true}
+	duelCommand  = map[string]bool{"duel": true, "вгуд": true, "дуэль": true}
 	cityCommand  = map[string]bool{"city": true, "сшен": true, "город": true, "г": true}
 	betCommand   = map[string]bool{"bet": true, "иуе": true, "бет": true, "ставка": true}
 	topCommand   = map[string]bool{"top": true, "ещз": true, "топ": true, "leaderboard": true, "лидеры": true}
@@ -114,6 +133,8 @@ func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate
 		handle = h.help
 	case rollCommand[command]:
 		handle = h.rollMessage
+	case duelCommand[command]:
+		handle = h.duelMessage
 	case cityCommand[command]:
 		handle = h.cityMessage
 	case betCommand[command]:
@@ -144,12 +165,14 @@ func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.Interacti
 		handle = h.scoreSlash
 	case "roll":
 		handle = h.rollSlash
+	case "duel":
+		handle = h.duelSlash
 	case "bet":
 		handle = h.betSlash
 	case "city":
 		handle = h.citySlash
 	default:
-		log.Panicln("UNREGISTRED COMMAND")
+		log.Panicln("UNREGISTERED COMMAND")
 		return
 	}
 	handle(s, i)
