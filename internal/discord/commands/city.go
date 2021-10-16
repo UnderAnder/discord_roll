@@ -13,81 +13,96 @@ import (
 const cityGameChan = "894280981098430514"
 const cityGameChanTest = "893415494512680990"
 
-type void struct{}
+type emptyStruct struct{}
 
 var (
-	member       void
+	void         emptyStruct
 	prevCity     string
 	prevAuthorID string
 	prevTime     time.Time
 	prevCities   = make(map[string]struct{})
 )
 
-func (h *Handler) city(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.ChannelID != cityGameChan || m.ChannelID != cityGameChanTest {
+// cityMessage Output the result of the cities game in response to the text command
+func (h *Handler) cityMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.ChannelID != cityGameChan && m.ChannelID != cityGameChanTest {
 		return
 	}
 
 	str := strings.SplitN(m.Content, " ", 2)
 	city := strings.ToLower(str[1])
-	cityForOutput := strings.ToTitle(city)
-	exists, _ := h.repository.CityExist(city)
-	var sb strings.Builder
 
-	sb.WriteString(getMessageAuthorNick(m))
+	result := h.city(m.Author.ID, city)
+
+	if _, err := s.ChannelMessageSendReply(m.ChannelID, result, m.Message.Reference()); err != nil {
+		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
+	}
+}
+
+// citySlash Output the result of the cities game on the guild channel in response to the slash command
+func (h *Handler) citySlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	userID := interactionUserID(i)
+
+	city := i.ApplicationCommandData().Options[0].StringValue()
+	text := h.city(userID, city)
+
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: text,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
+	}
+}
+
+// city Return result of a cities game as string
+func (h *Handler) city(discordID, city string) string {
+	var sb strings.Builder
+	cityTitle := strings.Title(city)
+	exists, _ := h.repository.CityExist(city)
+	username := discordgo.User{ID: discordID}.Username
+
+	sb.WriteString(username)
 
 	_, alreadyGuessed := prevCities[city]
 	if alreadyGuessed {
 		sb.WriteString(" город ")
-		sb.WriteString(cityForOutput)
+		sb.WriteString(cityTitle)
 		sb.WriteString(" уже был назван")
-		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		return
+		return sb.String()
 	}
 
 	if !exists {
 		sb.WriteString(" город ")
-		sb.WriteString(cityForOutput)
+		sb.WriteString(cityTitle)
 		sb.WriteString(" не существует")
-		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		return
+		return sb.String()
 	}
 
+	// start game
 	if prevCity == "" {
 		prevCity = city
-		prevAuthorID = m.Author.ID
+		prevAuthorID = discordID
 		prevTime = time.Now()
-		prevCities[city] = member
+		prevCities[city] = void
 		sb.WriteString(" Игра началась, следующий город на ")
 		sb.WriteString(strings.ToUpper(getLastChar(prevCity)))
-		_, err := s.ChannelMessageSend(m.ChannelID, sb.String())
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		return
+		return sb.String()
 	}
 
 	lastChar := getLastChar(prevCity)
 
 	if strings.HasPrefix(city, lastChar) {
-		score := scoreAccrual(m.Author.ID)
-		err := h.repository.AddScore(m.Author.ID, score)
+		score := scoreAccrual(discordID)
+		err := h.repository.AddScore(discordID, score)
 		if err != nil {
-			log.Println(err)
-			return
+			log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
 		}
 
 		prevCity = city
-		prevAuthorID = m.Author.ID
+		prevAuthorID = discordID
 		prevTime = time.Now()
 		lastChar = getLastChar(prevCity)
 
@@ -98,10 +113,7 @@ func (h *Handler) city(s *discordgo.Session, m *discordgo.MessageCreate) {
 		sb.WriteString(" город должен начинаться на ")
 	}
 	sb.WriteString(strings.ToUpper(lastChar))
-
-	if _, err := s.ChannelMessageSend(m.ChannelID, sb.String()); err != nil {
-		log.Println(err)
-	}
+	return sb.String()
 }
 
 func scoreAccrual(id string) int {

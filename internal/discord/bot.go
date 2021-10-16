@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/UnderAnder/discord_roll/internal/discord/commands"
 	"github.com/UnderAnder/discord_roll/internal/discord/reactions"
-	"github.com/UnderAnder/discord_roll/internal/discord/slashcommands"
 	"github.com/UnderAnder/discord_roll/internal/repository"
 	"github.com/bwmarrin/discordgo"
 	"log"
@@ -32,20 +31,18 @@ func NewBot(token, dbPath string) (*Bot, error) {
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
-		log.Fatal("error creating Discord session,", err)
+		log.Panic("error creating Discord session,", err)
 		return nil, err
 	}
 
 	// Create Event chans
 	events := make(chan string)
 
-	// Register text commands handler
 	commandsHandler := commands.NewHandler(db, events)
-	dg.AddHandler(commandsHandler.Handle)
-
+	// Register text commands handler
+	dg.AddHandler(commandsHandler.HandleMessage)
 	// Register slash commands handler
-	slashHandler := slashcommands.NewHandler(db, events)
-	dg.AddHandler(slashHandler.Handle)
+	dg.AddHandler(commandsHandler.HandleInteraction)
 
 	// Register reactionAdd handler
 	reactionsHandler := reactions.NewHandler(db, events)
@@ -58,8 +55,8 @@ func NewBot(token, dbPath string) (*Bot, error) {
 }
 
 // Run starts the bot, listens for a halt signal, and shuts down when the halt is received.
-func (b *Bot) Run() error {
-	if err := b.Start(); err != nil {
+func (b *Bot) Run(regCommands, delCommands bool) error {
+	if err := b.Start(regCommands); err != nil {
 		return errors.New("failed to start bot")
 	}
 
@@ -69,12 +66,12 @@ func (b *Bot) Run() error {
 	<-sc
 
 	log.Println("Received stop signal, shutting down...")
-	b.Stop()
+	b.Stop(delCommands)
 	return nil
 }
 
 // Start opens the connection to the discord web socket.
-func (b *Bot) Start() error {
+func (b *Bot) Start(regCommands bool) error {
 	log.Println("Starting bot...")
 	if err := b.repository.Open(); err != nil {
 		return errors.New("failed to open repository")
@@ -86,30 +83,20 @@ func (b *Bot) Start() error {
 	}
 	log.Println("Connection to Discord established.")
 
-	// Create slash commands in discord
-	for _, v := range slashcommands.Commands {
-		_, err := b.discord.ApplicationCommandCreate(b.discord.State.User.ID, GuildID, v)
-		log.Printf("Create command %v\n", v.Name)
-		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
-		}
+	// create discord slash commands
+	if regCommands {
+		b.createCommands()
 	}
-
 	return nil
 }
 
 // Stop gracefully shuts down the bot.
-func (b *Bot) Stop() {
+func (b *Bot) Stop(delCommands bool) {
 	log.Println("Stopping bot...")
 
-	log.Println("Removing slash commands...")
-	registeredCommands, _ := b.discord.ApplicationCommands(b.discord.State.User.ID, GuildID)
-	for _, v := range registeredCommands {
-		err := b.discord.ApplicationCommandDelete(b.discord.State.User.ID, GuildID, v.ID)
-		log.Printf("remove command: %v id: %v\n", v.Name, v.ID)
-		if err != nil {
-			log.Printf("Cannot delete '%v' command: %v\n", v.Name, err)
-		}
+	// removing slash commands before exit
+	if delCommands {
+		b.delCommands()
 	}
 
 	log.Println("Closing connection to Discord...")
@@ -123,4 +110,29 @@ func (b *Bot) Stop() {
 	if err != nil {
 		log.Printf("Error closing store session: %v\n", err)
 	}
+}
+
+// delCommands removes slash commands from discord
+func (b *Bot) delCommands() {
+	log.Println("Removing slash commands...")
+	registeredCommands, _ := b.discord.ApplicationCommands(b.discord.State.User.ID, GuildID)
+	for _, v := range registeredCommands {
+		err := b.discord.ApplicationCommandDelete(b.discord.State.User.ID, GuildID, v.ID)
+		log.Printf("remove command: %v id: %v\n", v.Name, v.ID)
+		if err != nil {
+			log.Printf("Cannot delete '%v' command: %v\n", v.Name, err)
+		}
+	}
+}
+
+// createCommands creates slash commands in discord
+func (b *Bot) createCommands() {
+	for _, v := range commands.SlashCommands {
+		_, err := b.discord.ApplicationCommandCreate(b.discord.State.User.ID, GuildID, v)
+		log.Printf("Create command %v\n", v.Name)
+		if err != nil {
+			log.Printf("Cannot create '%v' command: %v", v.Name, err)
+		}
+	}
+	log.Println("Slash commands will be available on the Discord server in a few minutes")
 }

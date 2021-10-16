@@ -10,26 +10,25 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Token variable used for command line parameter
-var (
-	Token  string
-	DBPath string
-)
-
-func init() {
-	flag.StringVar(&Token, "t", "", "Bot Token")
-	flag.StringVar(&DBPath, "db", "", "Path to DB")
-	flag.Parse()
-	// We want the seed to change on every launch
-	rand.Seed(time.Now().Unix())
-}
-
 func main() {
-	discordBot, err := discord.NewBot(Token, DBPath)
+	// flags
+	token := flag.String("t", "", "Bot Token")
+	dbPath := flag.String("db", "", "Path to DB")
+	regCommands := flag.Bool("regcommands", false, "Create slash commands in discord")
+	delCommands := flag.Bool("delcommands", false, "Remove slash commands from discord")
+	flag.Parse()
+
+	// seed
+	rand.Seed(time.Now().Unix())
+
+	// bot instance
+	discordBot, err := discord.NewBot(*token, *dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := discordBot.Run(); err != nil {
+
+	// run
+	if err := discordBot.Run(*regCommands, *delCommands); err != nil {
 		log.Fatal(err)
 	}
 }
