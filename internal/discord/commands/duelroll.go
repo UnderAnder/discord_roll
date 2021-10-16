@@ -10,43 +10,61 @@ import (
 
 // duelMessage Print invite to a duel and the result of the duel to the guild channel in response to the text command
 func (h *Handler) duelMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// check message came from a channel
+	if m.Member == nil {
+		msg := "Вызвать на дуэль можно только на канале"
+		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
+			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
+		}
+		return
+	}
+
 	str := strings.Fields(m.Content)
 	if len(str) != 3 {
 		return
 	}
 	if len(m.Mentions) != 1 {
-		_, err := s.ChannelMessageSend(m.ChannelID, "Оппонент не найден, упомяни одного участника через @")
-		if err != nil {
-			log.Println(err)
+		msg := "Оппонент не найден, упомяни одного участника через @"
+		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
+			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
+		}
+		return
+	}
+
+	opponent := m.Mentions[0]
+	if opponent.ID == s.State.User.ID {
+		msg := "Нельзя вызвать бота на дуэль"
+		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
+			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
 		}
 		return
 	}
 
 	bet, err := strconv.Atoi(str[2])
 	if err != nil {
-		_, err := s.ChannelMessageSend(m.ChannelID, "Ставка должна быть числом")
-		if err != nil {
-			log.Println(err)
+		msg := "Ставка должна быть числом"
+		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
+			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
 		}
 		return
 	}
 
-	opponent := m.Mentions[0]
 	startTxt := h.duelStart(m.Author, opponent, bet)
 
-	startMsg, err := s.ChannelMessageSend(m.ChannelID, startTxt)
+	startMsg, err := s.ChannelMessageSendReply(m.ChannelID, startTxt, m.Message.Reference())
 	if err != nil {
-		log.Println(err)
+		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
 		return
 	}
 	duelResult, err := h.duel(s, m.ChannelID, startMsg.ID, m.Author, opponent, bet)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Duel failed %v\n", err)
 		return
 	}
 	if duelResult == "" {
 		return
 	}
+	// update message to show result
 	_, err = s.ChannelMessageEdit(m.ChannelID, startMsg.ID, duelResult)
 	if err != nil {
 		log.Println(err)
@@ -56,11 +74,33 @@ func (h *Handler) duelMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 // duelSlash Print invite to a duel and the result of the duel to the guild channel in response to the slash command
 func (h *Handler) duelSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member == nil {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Вызвать на дуэль можно только на канале",
+			},
+		})
+		if err != nil {
+			log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
+		}
 		return
 	}
 
 	opponent := i.ApplicationCommandData().Options[0].UserValue(s)
 	bet := int(i.ApplicationCommandData().Options[1].IntValue())
+
+	if opponent.ID == s.State.User.ID {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Нельзя вызвать бота на дуэль",
+			},
+		})
+		if err != nil {
+			log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
+		}
+		return
+	}
 
 	startTxt := h.duelStart(i.Member.User, opponent, bet)
 
@@ -83,6 +123,7 @@ func (h *Handler) duelSlash(s *discordgo.Session, i *discordgo.InteractionCreate
 	if duelResult == "" {
 		return
 	}
+	// update message to show result
 	_, err = s.InteractionResponseEdit(s.State.User.ID, i.Interaction, &discordgo.WebhookEdit{
 		Content: duelResult,
 	})

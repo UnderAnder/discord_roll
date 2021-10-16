@@ -6,23 +6,21 @@ import (
 	"strconv"
 )
 
-// scoreMessage Print user score to the guild channel in response to the text command
+// scoreMessage Print user score in response to the text command
 func (h *Handler) scoreMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	score, err := h.score(m.Author.ID)
 	if err != nil {
 		return
 	}
-	if _, err := s.ChannelMessageSend(m.ChannelID, m.Author.Username+" у тебя "+score+" очков"); err != nil {
+	if _, err := s.ChannelMessageSendReply(m.ChannelID, "У тебя"+score+" очков", m.Message.Reference()); err != nil {
 		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
 	}
 }
 
-// scoreSlash Print user score to the guild channel in response to the slash command
+// scoreSlash Print user score in response to the slash command
 func (h *Handler) scoreSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Member == nil {
-		return
-	}
-	score, err := h.score(i.Member.User.ID)
+	userID := interactionUserID(i)
+	score, err := h.score(userID)
 	if err != nil {
 		return
 	}
@@ -30,7 +28,7 @@ func (h *Handler) scoreSlash(s *discordgo.Session, i *discordgo.InteractionCreat
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: i.Member.User.Username + " у тебя " + score + " очков",
+			Content: "У тебя " + score + " очков",
 		},
 	})
 	if err != nil {

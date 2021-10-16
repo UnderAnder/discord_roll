@@ -9,9 +9,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// rollMessage Output a random numbers on the guild channel in response to the text command
+// rollMessage Output a random numbers in response to the text command
 func (h *Handler) rollMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	var msg string
 	var err error
 	// if 0 default values will use
 	var maxRoll = 0
@@ -36,14 +35,14 @@ func (h *Handler) rollMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 		break
 	}
 
-	msg = h.roll(m.Author.Username, maxRoll, quantity)
+	result := h.roll(maxRoll, quantity)
 
-	if _, err := s.ChannelMessageSend(m.ChannelID, msg); err != nil {
+	if _, err := s.ChannelMessageSendReply(m.ChannelID, result, m.Message.Reference()); err != nil {
 		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
 	}
 }
 
-// rollSlash Output a random numbers on the guild channel in response to the slash command
+// rollSlash Output a random numbers in response to the slash command
 func (h *Handler) rollSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// if 0 default values will use
 	var maxScore = 0
@@ -57,7 +56,7 @@ func (h *Handler) rollSlash(s *discordgo.Session, i *discordgo.InteractionCreate
 		quantity = int(i.ApplicationCommandData().Options[1].IntValue())
 	}
 
-	msg := h.roll(i.Member.User.Username, maxScore, quantity)
+	msg := h.roll(maxScore, quantity)
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		// Ignore type for now, we'll discuss them in "responses" part
@@ -72,7 +71,7 @@ func (h *Handler) rollSlash(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 // roll Return a random numbers as string
-func (h *Handler) roll(userName string, maxRoll, quantity int) string {
+func (h *Handler) roll(maxRoll, quantity int) string {
 	// default values
 	if maxRoll == 0 {
 		maxRoll = 100
@@ -83,7 +82,6 @@ func (h *Handler) roll(userName string, maxRoll, quantity int) string {
 
 	// build output string
 	var sb strings.Builder
-	sb.WriteString(userName)
 	sb.WriteString(" (1-")
 	sb.WriteString(strconv.Itoa(maxRoll))
 	sb.WriteString(") ")

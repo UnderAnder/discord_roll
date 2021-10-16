@@ -10,7 +10,7 @@ import (
 
 const limit = 10
 
-// topMessage Print leaderboard to the guild channel in response to the text command
+// topMessage Print leaderboard in response to the text command
 func (h *Handler) topMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	top, err := h.top(s)
 	if err != nil {
@@ -26,7 +26,7 @@ func (h *Handler) topMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-// topSlash Print leaderboard to the guild channel in response to the slash command
+// topSlash Print leaderboard in response to the slash command
 func (h *Handler) topSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	top, err := h.top(s)
 	if err != nil {

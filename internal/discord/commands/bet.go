@@ -9,37 +9,35 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// betMessage Print result of a bet on the guild channel in response to the text command
+// betMessage Print result of a bet in response to the text command
 func (h *Handler) betMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	var text string
+	var result string
 	str := strings.Fields(m.Content)
 
 	// check bet
 	if len(str) != 2 {
-		text = "Укажи ставку"
+		result = "Укажи ставку"
 	} else {
 		bet, err := strconv.Atoi(str[1])
 		if err != nil {
 			log.Println(err)
-			text = "Ставка должна быть числом"
+			result = "Ставка должна быть числом"
 		} else {
-			text = h.bet(m.Author.ID, bet)
+			result = h.bet(m.Author.ID, bet)
 		}
 	}
 
-	if _, err := s.ChannelMessageSend(m.ChannelID, text); err != nil {
-		log.Println(err)
+	if _, err := s.ChannelMessageSendReply(m.ChannelID, result, m.Message.Reference()); err != nil {
+		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
 	}
 }
 
-// betSlash Print result of a bet on the guild channel in response to the slash command
+// betSlash Print result of a bet in response to the slash command
 func (h *Handler) betSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Member == nil {
-		return
-	}
+	userID := interactionUserID(i)
 
 	bet := int(i.ApplicationCommandData().Options[0].IntValue())
-	text := h.bet(i.Member.User.ID, bet)
+	text := h.bet(userID, bet)
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -76,21 +74,18 @@ func (h *Handler) bet(discordID string, bet int) string {
 
 	roll := rand.Intn(100) //nolint:gosec
 
-	sb.WriteString(" сделал ставку ")
-	sb.WriteString(scoreStr)
-	sb.WriteString(scoreSign)
 	if roll < 52 {
-		sb.WriteString(" и проиграл! :stuck_out_tongue_closed_eyes: ")
+		sb.WriteString("Проиграл! :stuck_out_tongue_closed_eyes: ")
 		err := h.repository.AddScore(discordID, -bet)
 		if err != nil {
-			log.Println(err)
+			log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
 		}
 		newScore = score - bet
 	} else {
-		sb.WriteString(" и выйграл! :partying_face: ")
+		sb.WriteString("Выйграл! :partying_face: ")
 		err := h.repository.AddScore(discordID, bet)
 		if err != nil {
-			log.Println(err)
+			log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
 		}
 		newScore = score + bet
 	}

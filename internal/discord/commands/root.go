@@ -177,3 +177,17 @@ func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.Interacti
 	}
 	handle(s, i)
 }
+
+// interactionUserID check interaction came from channel or DM and return UserID
+func interactionUserID(i *discordgo.InteractionCreate) string {
+	var userID string
+	switch {
+	case i.Member != nil:
+		userID = i.Member.User.ID
+	case i.User != nil:
+		userID = i.User.ID
+	default:
+		log.Panicf("Can't get userID")
+	}
+	return userID
+}

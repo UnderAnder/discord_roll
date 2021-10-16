@@ -9,6 +9,7 @@ import (
 func (h *Handler) help(s *discordgo.Session, m *discordgo.MessageCreate) {
 	helpCommand := "Команды:\n" +
 		"- `!roll (!ролл)` Спорим 100 не выкинешь?\n" +
+		"- `!duel (!дуэль)` Ролл против соперника со ставкой\n" +
 		"- `!bet (!бет, !ставка)` Лудомания\n" +
 		"- `!city (!город, !г)` Игра в города\n" +
 		"- `!top (!топ, !leaderboard)` Список лидеров\n" +

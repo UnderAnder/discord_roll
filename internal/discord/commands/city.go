@@ -23,7 +23,7 @@ var (
 	prevCities   = make(map[string]struct{})
 )
 
-// cityMessage Output the result of the cities game on the guild channel in response to the text command
+// cityMessage Output the result of the cities game in response to the text command
 func (h *Handler) cityMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.ChannelID != cityGameChan && m.ChannelID != cityGameChanTest {
 		return
@@ -32,21 +32,19 @@ func (h *Handler) cityMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 	str := strings.SplitN(m.Content, " ", 2)
 	city := strings.ToLower(str[1])
 
-	text := h.city(m.Author.ID, city)
+	result := h.city(m.Author.ID, city)
 
-	if _, err := s.ChannelMessageSend(m.ChannelID, text); err != nil {
-		log.Println(err)
+	if _, err := s.ChannelMessageSendReply(m.ChannelID, result, m.Message.Reference()); err != nil {
+		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
 	}
 }
 
 // citySlash Output the result of the cities game on the guild channel in response to the slash command
 func (h *Handler) citySlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Member == nil {
-		return
-	}
+	userID := interactionUserID(i)
 
 	city := i.ApplicationCommandData().Options[0].StringValue()
-	text := h.city(i.Member.User.ID, city)
+	text := h.city(userID, city)
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -62,7 +60,7 @@ func (h *Handler) citySlash(s *discordgo.Session, i *discordgo.InteractionCreate
 // city Return result of a cities game as string
 func (h *Handler) city(discordID, city string) string {
 	var sb strings.Builder
-	cityTitle := strings.ToTitle(city)
+	cityTitle := strings.Title(city)
 	exists, _ := h.repository.CityExist(city)
 	username := discordgo.User{ID: discordID}.Username
 
@@ -100,7 +98,7 @@ func (h *Handler) city(discordID, city string) string {
 		score := scoreAccrual(discordID)
 		err := h.repository.AddScore(discordID, score)
 		if err != nil {
-			log.Println(err)
+			log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
 		}
 
 		prevCity = city
