@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -28,21 +28,12 @@ func (h *Handler) topMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 // topSlash Print leaderboard in response to the slash command
 func (h *Handler) topSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	top, err := h.top(s)
+	result, err := h.top(s)
 	if err != nil {
 		return
 	}
 
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: top,
-		},
-	})
-	if err != nil {
-		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-		return
-	}
+	sendRespond(s, i, result)
 }
 
 // top Return leaderboard from DB as string
@@ -61,14 +52,7 @@ func (h *Handler) top(s *discordgo.Session) (string, error) {
 			log.Println(err)
 			return "", err
 		}
-
-		sb.WriteString("> ")
-		sb.WriteString(strconv.Itoa(i + 1))
-		sb.WriteString(". ")
-		sb.WriteString(user.Username)
-		sb.WriteString(" ")
-		sb.WriteString(strconv.Itoa(v.Score))
-		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf("> %d. %s %d\n", i+1, user.Username, v.Score))
 	}
 
 	return sb.String(), err

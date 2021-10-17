@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -15,13 +15,20 @@ const cityGameChanTest = "893415494512680990"
 
 type emptyStruct struct{}
 
-var (
-	void         emptyStruct
+var void emptyStruct
+
+type cityGame struct {
 	prevCity     string
 	prevAuthorID string
 	prevTime     time.Time
-	prevCities   = make(map[string]struct{})
-)
+	prevCities   map[string]struct{}
+}
+
+func newCityGame() *cityGame {
+	return &cityGame{prevCities: make(map[string]struct{})}
+}
+
+var game = newCityGame()
 
 // cityMessage Output the result of the cities game in response to the text command
 func (h *Handler) cityMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -33,107 +40,79 @@ func (h *Handler) cityMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 	city := strings.ToLower(str[1])
 
 	result := h.city(m.Author.ID, city)
-
-	if _, err := s.ChannelMessageSendReply(m.ChannelID, result, m.Message.Reference()); err != nil {
-		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-	}
+	sendMessageReply(s, m, result)
 }
 
 // citySlash Output the result of the cities game on the guild channel in response to the slash command
 func (h *Handler) citySlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	userID := interactionUserID(i)
 
-	city := i.ApplicationCommandData().Options[0].StringValue()
-	text := h.city(userID, city)
-
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: text,
-		},
-	})
-	if err != nil {
-		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-	}
+	city := strings.ToLower(i.ApplicationCommandData().Options[0].StringValue())
+	result := h.city(userID, city)
+	sendRespond(s, i, result)
 }
 
 // city Return result of a cities game as string
 func (h *Handler) city(discordID, city string) string {
-	var sb strings.Builder
 	cityTitle := strings.Title(city)
-	exists, _ := h.repository.CityExist(city)
-	username := discordgo.User{ID: discordID}.Username
 
-	sb.WriteString(username)
-
-	_, alreadyGuessed := prevCities[city]
+	_, alreadyGuessed := game.prevCities[city]
 	if alreadyGuessed {
-		sb.WriteString(" город ")
-		sb.WriteString(cityTitle)
-		sb.WriteString(" уже был назван")
-		return sb.String()
+		return fmt.Sprintf("Город %s уже был назван", cityTitle)
 	}
 
+	exists, _ := h.repository.CityExist(city)
 	if !exists {
-		sb.WriteString(" город ")
-		sb.WriteString(cityTitle)
-		sb.WriteString(" не существует")
-		return sb.String()
+		return fmt.Sprintf("Город %s не существует", cityTitle)
 	}
 
 	// start game
-	if prevCity == "" {
-		prevCity = city
-		prevAuthorID = discordID
-		prevTime = time.Now()
-		prevCities[city] = void
-		sb.WriteString(" Игра началась, следующий город на ")
-		sb.WriteString(strings.ToUpper(getLastChar(prevCity)))
-		return sb.String()
+	if game.prevCity == "" {
+		game.prevCity = city
+		game.prevAuthorID = discordID
+		game.prevTime = time.Now()
+		game.prevCities[city] = void
+		return fmt.Sprintf("Игра началась, следующий город на %s", strings.ToUpper(getLastChar(game.prevCity)))
 	}
 
-	lastChar := getLastChar(prevCity)
-
-	if strings.HasPrefix(city, lastChar) {
-		score := scoreAccrual(discordID)
-		err := h.repository.AddScore(discordID, score)
-		if err != nil {
-			log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
-		}
-
-		prevCity = city
-		prevAuthorID = discordID
-		prevTime = time.Now()
-		lastChar = getLastChar(prevCity)
-
-		sb.WriteString("  :tada: +")
-		sb.WriteString(strconv.Itoa(score))
-		sb.WriteString(" Слудующий город на ")
-	} else {
-		sb.WriteString(" город должен начинаться на ")
+	lastChar := getLastChar(game.prevCity)
+	if !strings.HasPrefix(city, lastChar) {
+		return fmt.Sprintf("Город должен начинаться на %s", strings.ToUpper(lastChar))
 	}
-	sb.WriteString(strings.ToUpper(lastChar))
-	return sb.String()
+
+	score := scoreAccrual(discordID)
+	err := h.repository.AddScore(discordID, score)
+	if err != nil {
+		log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
+	}
+
+	game.prevCity = city
+	game.prevAuthorID = discordID
+	game.prevTime = time.Now()
+	lastChar = getLastChar(game.prevCity)
+
+	return fmt.Sprintf("Верно :tada: +%d Слудующий город на %s", score, strings.ToUpper(lastChar))
 }
 
 func scoreAccrual(id string) int {
 	var score int
 
 	switch id {
-	case prevAuthorID:
+	case game.prevAuthorID:
 		score++
 	default:
 		score += 6
 	}
 
+	secondsPast := time.Since(game.prevTime).Seconds()
 	switch {
-	case time.Since(prevTime) < 3000000000:
+	case secondsPast < 5:
 		score += 6
-	case time.Since(prevTime) < 5000000000:
+	case secondsPast < 10:
 		score += 4
-	case time.Since(prevTime) < 10000000000:
+	case secondsPast < 15:
 		score += 3
-	case time.Since(prevTime) < 15000000000:
+	case secondsPast < 20:
 		score += 2
 	default:
 		score++
@@ -147,5 +126,10 @@ func getLastChar(s string) string {
 	if r == utf8.RuneError && (size == 0 || size == 1) {
 		size = 0
 	}
-	return strings.ToLower(s[len(s)-size:])
+	lastChar := strings.ToLower(s[len(s)-size:])
+	// there is no city starts with "ь"
+	if lastChar == "ь" {
+		lastChar = strings.ToLower(s[len(s)-size*2 : len(s)-size])
+	}
+	return lastChar
 }

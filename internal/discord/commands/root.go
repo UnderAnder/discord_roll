@@ -191,3 +191,26 @@ func interactionUserID(i *discordgo.InteractionCreate) string {
 	}
 	return userID
 }
+
+func sendRespond(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) bool {
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: msg,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
+		return false
+	}
+	return true
+}
+
+func sendMessageReply(s *discordgo.Session, m *discordgo.MessageCreate, msg string) (*discordgo.Message, bool) {
+	msgInstance, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference())
+	if err != nil {
+		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
+		return nil, false
+	}
+	return msgInstance, true
+}

@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"log"
+	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -36,10 +36,7 @@ func (h *Handler) rollMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 	}
 
 	result := h.roll(maxRoll, quantity)
-
-	if _, err := s.ChannelMessageSendReply(m.ChannelID, result, m.Message.Reference()); err != nil {
-		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-	}
+	sendMessageReply(s, m, result)
 }
 
 // rollSlash Output a random numbers in response to the slash command
@@ -56,18 +53,8 @@ func (h *Handler) rollSlash(s *discordgo.Session, i *discordgo.InteractionCreate
 		quantity = int(i.ApplicationCommandData().Options[1].IntValue())
 	}
 
-	msg := h.roll(maxScore, quantity)
-
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		// Ignore type for now, we'll discuss them in "responses" part
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: msg,
-		},
-	})
-	if err != nil {
-		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-	}
+	result := h.roll(maxScore, quantity)
+	sendRespond(s, i, result)
 }
 
 // roll Return a random numbers as string
@@ -82,9 +69,7 @@ func (h *Handler) roll(maxRoll, quantity int) string {
 
 	// build output string
 	var sb strings.Builder
-	sb.WriteString(" (1-")
-	sb.WriteString(strconv.Itoa(maxRoll))
-	sb.WriteString(") ")
+	sb.WriteString(fmt.Sprintf("(1-%d)", maxRoll))
 	for i := 0; i < quantity; i++ {
 		sb.WriteString(" :game_die:")
 		sb.WriteString(strconv.Itoa(rand.Intn(maxRoll) + 1)) //nolint:gosec

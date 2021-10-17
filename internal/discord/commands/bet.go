@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -15,82 +16,65 @@ func (h *Handler) betMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	str := strings.Fields(m.Content)
 
 	// check bet
-	if len(str) != 2 {
-		result = "Укажи ставку"
-	} else {
+	switch len(str) {
+	case 2:
 		bet, err := strconv.Atoi(str[1])
 		if err != nil {
 			log.Println(err)
 			result = "Ставка должна быть числом"
-		} else {
-			result = h.bet(m.Author.ID, bet)
+			break
 		}
+		result = h.bet(m.Author.ID, bet)
+	default:
+		result = "Укажи ставку"
 	}
-
-	if _, err := s.ChannelMessageSendReply(m.ChannelID, result, m.Message.Reference()); err != nil {
-		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-	}
+	sendMessageReply(s, m, result)
 }
 
 // betSlash Print result of a bet in response to the slash command
 func (h *Handler) betSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	userID := interactionUserID(i)
-
 	bet := int(i.ApplicationCommandData().Options[0].IntValue())
-	text := h.bet(userID, bet)
-
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: text,
-		},
-	})
-	if err != nil {
-		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-	}
+	result := h.bet(userID, bet)
+	sendRespond(s, i, result)
 }
 
 // bet Return result of a bet as string
 func (h *Handler) bet(discordID string, bet int) string {
-	var scoreSign = " очков"
+	var scoreSign = "очков"
 	var newScore int
 	var sb strings.Builder
+
+	if bet < 1 {
+		return "Ставка должна быть больше 0"
+	}
 
 	score, err := h.repository.GetScore(discordID)
 	if err != nil {
 		log.Println(err)
-		sb.WriteString(" у тебя нет очков, чтобы совершить ставку")
-		return sb.String()
+		return fmt.Sprintf("У тебя нет %s, чтобы совершить ставку", scoreSign)
 	}
 
-	scoreStr := strconv.Itoa(score)
-
 	if bet > score {
-		sb.WriteString(" Слишком высокая ставка, у тебя всего ")
-		sb.WriteString(scoreStr)
-		sb.WriteString(scoreSign)
-		return sb.String()
+		return fmt.Sprintf("Слишком высокая ставка, у тебя всего %d %s", score, scoreSign)
 	}
 
 	roll := rand.Intn(100) //nolint:gosec
 
-	if roll < 52 {
+	switch {
+	case roll <= 51:
 		sb.WriteString("Проиграл! :stuck_out_tongue_closed_eyes: ")
-		err := h.repository.AddScore(discordID, -bet)
-		if err != nil {
-			log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
-		}
-		newScore = score - bet
-	} else {
-		sb.WriteString("Выйграл! :partying_face: ")
-		err := h.repository.AddScore(discordID, bet)
-		if err != nil {
-			log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
-		}
-		newScore = score + bet
+		bet = -bet
+	case roll > 51:
+		sb.WriteString("Выйграл! :tada: ")
 	}
-	sb.WriteString(" Теперь у тебя ")
-	sb.WriteString(strconv.Itoa(newScore))
-	sb.WriteString(scoreSign)
+
+	err = h.repository.AddScore(discordID, bet)
+	if err != nil {
+		log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
+	}
+	newScore = score + bet
+
+	sb.WriteString(fmt.Sprintf(" Теперь у тебя %d %s", newScore, scoreSign))
 	return sb.String()
 }

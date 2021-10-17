@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"log"
 	"math/rand"
@@ -8,55 +9,52 @@ import (
 	"strings"
 )
 
+type duel struct {
+	sess       *discordgo.Session
+	channelID  string
+	messageID  string
+	challenger *discordgo.User
+	opponent   *discordgo.User
+	bet        int
+}
+
 // duelMessage Print invite to a duel and the result of the duel to the guild channel in response to the text command
 func (h *Handler) duelMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// check message came from a channel
 	if m.Member == nil {
-		msg := "Вызвать на дуэль можно только на канале"
-		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
-			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-		}
+		sendMessageReply(s, m, "Вызвать на дуэль можно только на канале")
 		return
 	}
 
 	str := strings.Fields(m.Content)
+
+	// check is command correct
 	if len(str) != 3 {
+		sendMessageReply(s, m, "Неверный формат, должно быть `!duel @user ставка`")
 		return
 	}
 	if len(m.Mentions) != 1 {
-		msg := "Оппонент не найден, упомяни одного участника через @"
-		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
-			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-		}
-		return
-	}
-
-	opponent := m.Mentions[0]
-	if opponent.ID == s.State.User.ID {
-		msg := "Нельзя вызвать бота на дуэль"
-		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
-			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-		}
+		sendMessageReply(s, m, "Оппонент не найден, упомяни одного участника через @")
 		return
 	}
 
 	bet, err := strconv.Atoi(str[2])
 	if err != nil {
-		msg := "Ставка должна быть числом"
-		if _, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Message.Reference()); err != nil {
-			log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-		}
+		sendMessageReply(s, m, "Ставка должна быть числом")
 		return
 	}
 
-	startTxt := h.duelStart(m.Author, opponent, bet)
-
-	startMsg, err := s.ChannelMessageSendReply(m.ChannelID, startTxt, m.Message.Reference())
-	if err != nil {
-		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
+	opponent := m.Mentions[0]
+	duel := duel{sess: s, channelID: m.ChannelID, challenger: m.Author, opponent: opponent, bet: bet}
+	// print invite to duel
+	startTxt, ok := h.duelStart(duel)
+	startMsg, done := sendMessageReply(s, m, startTxt)
+	if !ok || !done {
 		return
 	}
-	duelResult, err := h.duel(s, m.ChannelID, startMsg.ID, m.Author, opponent, bet)
+
+	duel.messageID = startMsg.ID
+	duelResult, err := h.duel(duel)
 	if err != nil {
 		log.Printf("Duel failed %v\n", err)
 		return
@@ -74,52 +72,35 @@ func (h *Handler) duelMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 // duelSlash Print invite to a duel and the result of the duel to the guild channel in response to the slash command
 func (h *Handler) duelSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member == nil {
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Вызвать на дуэль можно только на канале",
-			},
-		})
-		if err != nil {
-			log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-		}
+		sendRespond(s, i, "Вызвать на дуэль можно только на канале")
 		return
 	}
 
 	opponent := i.ApplicationCommandData().Options[0].UserValue(s)
 	bet := int(i.ApplicationCommandData().Options[1].IntValue())
 
-	if opponent.ID == s.State.User.ID {
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Нельзя вызвать бота на дуэль",
-			},
-		})
-		if err != nil {
-			log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-		}
+	duel := duel{sess: s, channelID: i.ChannelID, challenger: i.Member.User, opponent: opponent, bet: bet}
+	// print invite to duel
+	startTxt, ok := h.duelStart(duel)
+	done := sendRespond(s, i, startTxt)
+	if !ok || !done {
 		return
 	}
 
-	startTxt := h.duelStart(i.Member.User, opponent, bet)
-
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: startTxt,
-		},
-	})
-	if err != nil {
-		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-	}
-	resp, _ := s.InteractionResponse(s.State.User.ID, i.Interaction)
-
-	duelResult, err := h.duel(s, i.ChannelID, resp.ID, i.Member.User, opponent, bet)
+	// get interaction message
+	resp, err := s.InteractionResponse(s.State.User.ID, i.Interaction)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+
+	duel.messageID = resp.ID
+	duelResult, err := h.duel(duel)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	// there is nothing to print
 	if duelResult == "" {
 		return
 	}
@@ -136,39 +117,37 @@ func (h *Handler) duelSlash(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 // duelStart invite to a duel
-func (h *Handler) duelStart(challenger, opponent *discordgo.User, bet int) string {
-	var sb strings.Builder
-
-	if bet < 0 {
-		return "Ставка не может быть отрицательной"
+func (h *Handler) duelStart(duel duel) (string, bool) {
+	// check opponent is not bot
+	if duel.opponent.ID == duel.sess.State.User.ID {
+		return "Нельзя вызвать бота на дуэль", false
 	}
 
-	authorScore, _ := h.repository.GetScore(challenger.ID)
-	opponentScore, _ := h.repository.GetScore(opponent.ID)
-	if bet > authorScore {
-		sb.WriteString("Ставка слишком высока, у тебя всего ")
-		sb.WriteString(strconv.Itoa(authorScore))
-		return sb.String()
-	}
-	if bet > opponentScore {
-		sb.WriteString("У твоего оппонента недостаточно очков, ставка не должна превышать ")
-		sb.WriteString(strconv.Itoa(opponentScore))
-		return sb.String()
+	if duel.bet < 0 {
+		return "Ставка не может быть отрицательной", false
 	}
 
-	sb.WriteString(opponent.Mention())
-	sb.WriteString(" тебя вызвали на дуэль, нажми на :game_die: чтобы принять, или :no_entry_sign: чтобы отказаться")
-	return sb.String()
+	authorScore, _ := h.repository.GetScore(duel.challenger.ID)
+	opponentScore, _ := h.repository.GetScore(duel.opponent.ID)
+	if duel.bet > authorScore {
+		return fmt.Sprintf("Ставка слишком высока, у тебя всего %d", authorScore), false
+	}
+	if duel.bet > opponentScore {
+		msg := "У твоего оппонента недостаточно очков, ставка не должна превышать %d"
+		return fmt.Sprintf(msg, opponentScore), false
+	}
+
+	msg := "%s тебя вызвали на дуэль, нажми на :game_die: чтобы принять, или :no_entry_sign: чтобы отказаться"
+	return fmt.Sprintf(msg, duel.opponent.Mention()), true
 }
 
 // duel process the duel
-func (h *Handler) duel(s *discordgo.Session, channelID, messageID string, challenger, opponent *discordgo.User, bet int) (string, error) {
-	betStr := strconv.Itoa(bet)
-	err := s.MessageReactionAdd(channelID, messageID, "🎲")
+func (h *Handler) duel(duel duel) (string, error) {
+	err := duel.sess.MessageReactionAdd(duel.channelID, duel.messageID, "🎲")
 	if err != nil {
 		return "", err
 	}
-	err = s.MessageReactionAdd(channelID, messageID, "🚫")
+	err = duel.sess.MessageReactionAdd(duel.channelID, duel.messageID, "🚫")
 	if err != nil {
 		log.Println(err)
 		// not critical no need for return here
@@ -176,7 +155,7 @@ func (h *Handler) duel(s *discordgo.Session, channelID, messageID string, challe
 
 	accept := <-h.eventChan
 	if accept != "roll" {
-		_, _ = s.ChannelMessageEdit(channelID, messageID, opponent.Username+" отказался")
+		_, _ = duel.sess.ChannelMessageEdit(duel.channelID, duel.messageID, duel.opponent.Username+" отказался")
 		return "", nil
 	}
 
@@ -184,29 +163,18 @@ func (h *Handler) duel(s *discordgo.Session, channelID, messageID string, challe
 	opponentRoll := rand.Intn(100) + 1 //nolint:gosec
 
 	var sb strings.Builder
-	sb.WriteString(challenger.Username + " выбрасывает " + strconv.Itoa(authorRoll) + "\n")
-	sb.WriteString(opponent.Username + " выбрасывает " + strconv.Itoa(opponentRoll) + "\n")
+	sb.WriteString(fmt.Sprintf("%s выбрасывает %d\n", duel.challenger.Username, authorRoll))
+	sb.WriteString(fmt.Sprintf("%s выбрасывает %d\n", duel.opponent.Username, opponentRoll))
 	switch {
 	case authorRoll < opponentRoll:
-		err := h.repository.AddScore(challenger.ID, -bet)
-		if err != nil {
-			return "", err
-		}
-		err = h.repository.AddScore(opponent.ID, bet)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(opponent.Username + " победил и получает" + betStr + " очков соперника!")
+		_ = h.repository.AddScore(duel.challenger.ID, -duel.bet)
+		_ = h.repository.AddScore(duel.opponent.ID, duel.bet)
+		sb.WriteString(fmt.Sprintf("%s победил и получает %d очков соперника!", duel.opponent.Username, duel.bet))
 	case authorRoll > opponentRoll:
-		err := h.repository.AddScore(challenger.ID, bet)
-		if err != nil {
-			return "", err
-		}
-		err = h.repository.AddScore(opponent.ID, -bet)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(challenger.Username + " победил и получает " + betStr + " очков соперника!")
+		_ = h.repository.AddScore(duel.challenger.ID, duel.bet)
+		_ = h.repository.AddScore(duel.opponent.ID, -duel.bet)
+
+		sb.WriteString(fmt.Sprintf("%s победил и получает %d очков соперника!", duel.challenger.Username, duel.bet))
 	default:
 		sb.WriteString("Ваши силы равны, оба остались при своём")
 	}

@@ -8,32 +8,22 @@ import (
 
 // scoreMessage Print user score in response to the text command
 func (h *Handler) scoreMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	score, err := h.score(m.Author.ID)
+	result, err := h.score(m.Author.ID)
 	if err != nil {
 		return
 	}
-	if _, err := s.ChannelMessageSendReply(m.ChannelID, "У тебя"+score+" очков", m.Message.Reference()); err != nil {
-		log.Printf("Failed to response the command %v, %v\n", m.Content, err)
-	}
+	sendMessageReply(s, m, result)
 }
 
 // scoreSlash Print user score in response to the slash command
 func (h *Handler) scoreSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	userID := interactionUserID(i)
-	score, err := h.score(userID)
+	result, err := h.score(userID)
 	if err != nil {
 		return
 	}
 
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "У тебя " + score + " очков",
-		},
-	})
-	if err != nil {
-		log.Printf("Failed to response the command %v, %v\n", i.ApplicationCommandData().Name, err)
-	}
+	sendRespond(s, i, result)
 }
 
 // score Return user score from DB as string
