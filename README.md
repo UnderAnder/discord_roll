@@ -2,10 +2,10 @@
 
 __Text commands__
 
-* !roll [max] [times] (!ролл)
+* !roll \<max> \<times> (!ролл)
 * !duel [@user] [bet] (!дуэль)
 * !bet  [bet] (!ставка)
-* !city [city] (!город) требуется заполнить бд
+* !city [city] (!город) `the database needs to be populated`
 * !score (!очки)
 * !top (!лидеры, !leaderboard)
 * !help (!помощь)
@@ -19,7 +19,7 @@ __Slash commands__
 * /roll
 * /duel
 * /bet
-* /city
+* /city `the database needs to be populated`
 * /score
 * /top
 
