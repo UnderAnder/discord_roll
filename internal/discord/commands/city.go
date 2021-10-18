@@ -10,12 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const cityGameChan = "894280981098430514"
-const cityGameChanTest = "893415494512680990"
-
 type emptyStruct struct{}
-
-var void emptyStruct
 
 type cityGame struct {
 	prevCity     string
@@ -24,22 +19,19 @@ type cityGame struct {
 	prevCities   map[string]struct{}
 }
 
+var games = make(map[string]*cityGame)
+var void emptyStruct
+
 func newCityGame() *cityGame {
 	return &cityGame{prevCities: make(map[string]struct{})}
 }
 
-var game = newCityGame()
-
 // cityMessage Output the result of the cities game in response to the text command
 func (h *Handler) cityMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.ChannelID != cityGameChan && m.ChannelID != cityGameChanTest {
-		return
-	}
-
 	str := strings.SplitN(m.Content, " ", 2)
 	city := strings.ToLower(str[1])
 
-	result := h.city(m.Author.ID, city)
+	result := h.city(m.ChannelID, m.Author.ID, city)
 	sendMessageReply(s, m, result)
 }
 
@@ -48,22 +40,24 @@ func (h *Handler) citySlash(s *discordgo.Session, i *discordgo.InteractionCreate
 	userID := interactionUserID(i)
 
 	city := strings.ToLower(i.ApplicationCommandData().Options[0].StringValue())
-	result := h.city(userID, city)
+	result := h.city(i.ChannelID, userID, city)
 	sendRespond(s, i, result)
 }
 
 // city Return result of a cities game as string
-func (h *Handler) city(discordID, city string) string {
+func (h *Handler) city(channelID, discordID, city string) string {
+	// check game already started on channel
+	game, ok := games[channelID]
+	if !ok {
+		game = newCityGame()
+		games[channelID] = game
+	}
+
 	cityTitle := strings.Title(city)
 
 	_, alreadyGuessed := game.prevCities[city]
 	if alreadyGuessed {
 		return fmt.Sprintf("Город %s уже был назван", cityTitle)
-	}
-
-	exists, _ := h.repository.CityExist(city)
-	if !exists {
-		return fmt.Sprintf("Город %s не существует", cityTitle)
 	}
 
 	// start game
@@ -80,7 +74,12 @@ func (h *Handler) city(discordID, city string) string {
 		return fmt.Sprintf("Город должен начинаться на %s", strings.ToUpper(lastChar))
 	}
 
-	score := scoreAccrual(discordID)
+	exists, _ := h.repository.CityExist(city)
+	if !exists {
+		return fmt.Sprintf("Город %s не существует", cityTitle)
+	}
+
+	score := scoreAccrual(game, discordID)
 	err := h.repository.AddScore(discordID, score)
 	if err != nil {
 		log.Printf("Failed to change score for userID: %v, %v\n", discordID, err)
@@ -94,7 +93,7 @@ func (h *Handler) city(discordID, city string) string {
 	return fmt.Sprintf("Верно :tada: +%d Слудующий город на %s", score, strings.ToUpper(lastChar))
 }
 
-func scoreAccrual(id string) int {
+func scoreAccrual(game *cityGame, id string) int {
 	var score int
 
 	switch id {
