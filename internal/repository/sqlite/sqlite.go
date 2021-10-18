@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 	"errors"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"strings"
 )
@@ -53,7 +54,8 @@ func (s *Sqlite) AddScore(discordID string, score int) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert into users(discord_id, score) values(?, ?) ON CONFLICT(discord_id) DO UPDATE SET score=score+?;")
+	query := "insert into users(discord_id, score) values(?, ?) ON CONFLICT(discord_id) DO UPDATE SET score=score+?;"
+	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}

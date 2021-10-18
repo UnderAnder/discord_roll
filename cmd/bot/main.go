@@ -7,15 +7,14 @@ import (
 	"time"
 
 	"github.com/UnderAnder/discord_roll/internal/discord"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
 	// flags
 	token := flag.String("t", "", "Bot Token")
 	dbPath := flag.String("db", "", "Path to DB")
-	regCommands := flag.Bool("regcommands", false, "Create slash commands in discord")
-	delCommands := flag.Bool("delcommands", false, "Remove slash commands from discord")
+	regCommands := flag.Bool("regcommands", false, "Create Discord slash commands")
+	delCommands := flag.Bool("delcommands", false, "Remove Discord slash commands")
 	flag.Parse()
 
 	// seed
