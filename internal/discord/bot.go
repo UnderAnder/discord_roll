@@ -19,8 +19,6 @@ type Bot struct {
 	repository repository.Repository
 }
 
-var GuildID = "" // Register slash commands globally
-
 // NewBot configures a Bot and returns it.
 func NewBot(token, dbPath string) (*Bot, error) {
 	db, err := repository.New(dbPath)
@@ -56,8 +54,8 @@ func NewBot(token, dbPath string) (*Bot, error) {
 }
 
 // Run starts the bot, listens for a halt signal, and shuts down when the halt is received.
-func (b *Bot) Run(regCommands, delCommands bool) error {
-	if err := b.Start(regCommands); err != nil {
+func (b *Bot) Run(regCommands, delCommands bool, guildID string) error {
+	if err := b.Start(regCommands, guildID); err != nil {
 		return err
 	}
 
@@ -67,12 +65,12 @@ func (b *Bot) Run(regCommands, delCommands bool) error {
 	<-sc
 
 	log.Println("Received stop signal, shutting down...")
-	b.Stop(delCommands)
+	b.Stop(delCommands, guildID)
 	return nil
 }
 
 // Start opens the connection to the discord web socket.
-func (b *Bot) Start(regCommands bool) error {
+func (b *Bot) Start(regCommands bool, guildID string) error {
 	log.Println("Starting bot...")
 	if err := b.repository.Open(); err != nil {
 		return errors.New("failed to open repository")
@@ -84,18 +82,18 @@ func (b *Bot) Start(regCommands bool) error {
 
 	// create discord slash commands
 	if regCommands {
-		b.createCommands()
+		b.createCommands(guildID)
 	}
 	return nil
 }
 
 // Stop gracefully shuts down the bot.
-func (b *Bot) Stop(delCommands bool) {
+func (b *Bot) Stop(delCommands bool, guildID string) {
 	log.Println("Stopping bot...")
 
 	// removing slash commands before exit
 	if delCommands {
-		b.delCommands()
+		b.delCommands(guildID)
 	}
 
 	log.Println("Closing connection to Discord...")
@@ -111,32 +109,44 @@ func (b *Bot) Stop(delCommands bool) {
 	}
 }
 
-// delCommands removes slash commands from discord
-func (b *Bot) delCommands() {
-	log.Println("Removing slash commands...")
-	registeredCommands, _ := b.discord.ApplicationCommands(b.discord.State.User.ID, GuildID)
+// delCommands removes slash commands from Discord
+func (b *Bot) delCommands(guildID string) {
+	switch guildID {
+	case "":
+		log.Println("Removing slash commands globally...")
+	default:
+		log.Printf("Removing slash commands from guild %v...\n", guildID)
+	}
+	registeredCommands, _ := b.discord.ApplicationCommands(b.discord.State.User.ID, guildID)
 	for _, v := range registeredCommands {
-		err := b.discord.ApplicationCommandDelete(b.discord.State.User.ID, GuildID, v.ID)
-		log.Printf("remove command: %v id: %v\n", v.Name, v.ID)
+		err := b.discord.ApplicationCommandDelete(b.discord.State.User.ID, guildID, v.ID)
+		log.Printf("Remove command: %v\n", v.Name)
 		if err != nil {
 			log.Printf("Cannot delete '%v' command: %v\n", v.Name, err)
 		}
 	}
 }
 
-// createCommands creates slash commands in discord
-func (b *Bot) createCommands() {
+// createCommands creates slash commands in Discord
+func (b *Bot) createCommands(guildID string) {
+	switch guildID {
+	case "":
+		log.Println("Creating slash commands globally...")
+	default:
+		log.Printf("Creating slash commands on guild %v...\n", guildID)
+	}
+
 	for _, v := range commands.SlashCommands {
-		_, err := b.discord.ApplicationCommandCreate(b.discord.State.User.ID, GuildID, v)
+		_, err := b.discord.ApplicationCommandCreate(b.discord.State.User.ID, guildID, v)
 		log.Printf("Create command %v\n", v.Name)
 		if err != nil {
 			log.Printf("Cannot create '%v' command: %v", v.Name, err)
 		}
 	}
-	log.Println("Slash commands will be available on the Discord server in a few minutes")
+	log.Println("Slash commands will be available in a few minutes")
 }
 
-// retry to open the discord connection until it is established
+// retry to open the Discord connection until it is established
 func retry(f func() error) {
 	wait := time.Duration(1)
 	for {

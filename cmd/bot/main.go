@@ -10,11 +10,14 @@ import (
 )
 
 func main() {
+	const guildIDusage = "ID of Discord guild (server) to register or remove slash commands. " +
+		"If not specified, slash commands will be global"
 	// flags
 	token := flag.String("t", "", "Bot Token")
-	dbPath := flag.String("db", "", "Path to DB")
+	dbPath := flag.String("db", "./data/sqlite/bot.sqlite3", "Path to DB")
 	regCommands := flag.Bool("regcommands", false, "Create Discord slash commands")
 	delCommands := flag.Bool("delcommands", false, "Remove Discord slash commands")
+	guildID := flag.String("guild", "", guildIDusage)
 	flag.Parse()
 
 	// seed
@@ -27,7 +30,7 @@ func main() {
 	}
 
 	// run
-	if err := discordBot.Run(*regCommands, *delCommands); err != nil {
+	if err := discordBot.Run(*regCommands, *delCommands, *guildID); err != nil {
 		log.Fatal(err)
 	}
 }
