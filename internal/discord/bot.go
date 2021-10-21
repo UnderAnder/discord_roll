@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 // Bot listens to Discord and performs the various actions
@@ -35,7 +36,7 @@ func NewBot(token, dbPath string) (*Bot, error) {
 		return nil, err
 	}
 
-	// Create Event chans
+	// Create Event chan
 	events := make(chan string)
 
 	commandsHandler := commands.NewHandler(db, events)
@@ -57,7 +58,7 @@ func NewBot(token, dbPath string) (*Bot, error) {
 // Run starts the bot, listens for a halt signal, and shuts down when the halt is received.
 func (b *Bot) Run(regCommands, delCommands bool) error {
 	if err := b.Start(regCommands); err != nil {
-		return errors.New("failed to start bot")
+		return err
 	}
 
 	log.Println("Bot is now running.  Press CTRL-C to exit.")
@@ -78,9 +79,7 @@ func (b *Bot) Start(regCommands bool) error {
 	}
 
 	log.Println("Opening connection to Discord...")
-	if err := b.discord.Open(); err != nil {
-		return errors.New("failed to open web socket connection to Discord")
-	}
+	retry(b.discord.Open)
 	log.Println("Connection to Discord established.")
 
 	// create discord slash commands
@@ -135,4 +134,25 @@ func (b *Bot) createCommands() {
 		}
 	}
 	log.Println("Slash commands will be available on the Discord server in a few minutes")
+}
+
+// retry to open the discord connection until it is established
+func retry(f func() error) {
+	wait := time.Duration(1)
+	for {
+		err := f()
+		if err == nil {
+			return
+		}
+		if errors.Is(err, discordgo.ErrWSAlreadyOpen) {
+			log.Println("Websocket already exists, no need to reconnect")
+			return
+		}
+		time.Sleep(wait)
+		wait *= 2
+		if wait > 600 {
+			wait = 600
+		}
+		log.Println("retrying after error:", err)
+	}
 }
