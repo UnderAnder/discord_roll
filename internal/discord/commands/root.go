@@ -4,6 +4,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/UnderAnder/discord_roll/internal/config"
 	"github.com/UnderAnder/discord_roll/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
@@ -101,14 +102,16 @@ type handlerInteraction func(*discordgo.Session, *discordgo.InteractionCreate)
 type Handler struct {
 	repository repository.Repository
 	eventChan  chan string
+	cfg        *config.Config
 }
 
-func NewHandler(r repository.Repository, e chan string) *Handler {
-	return &Handler{repository: r, eventChan: e}
+func NewHandler(r repository.Repository, e chan string, cfg *config.Config) *Handler {
+	return &Handler{repository: r, eventChan: e, cfg: cfg}
 }
 
 // HandleMessage text command handler
 func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// ignore messages from bot
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
@@ -116,6 +119,12 @@ func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate
 	text := strings.TrimSpace(strings.ToLower(m.Content))
 
 	if !strings.HasPrefix(text, CommandKeyword) {
+		return
+	}
+
+	// check guild is allowed
+	if h.cfg.Bot.GuildID != "" && h.cfg.Bot.GuildID != m.GuildID {
+		log.Println("Get command from not allowed guild")
 		return
 	}
 
@@ -154,7 +163,11 @@ func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate
 
 // HandleInteraction slash commands handler
 func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	log.Printf("Received slash command: %v", i.ApplicationCommandData().Name)
+	// check guild is allowed
+	if h.cfg.Bot.GuildID != "" && h.cfg.Bot.GuildID != i.GuildID {
+		log.Println("Get interaction from not allowed guild")
+		return
+	}
 
 	var handle handlerInteraction
 
@@ -175,6 +188,8 @@ func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.Interacti
 		log.Panicln("UNREGISTERED COMMAND")
 		return
 	}
+
+	log.Printf("Received slash command: %v", i.ApplicationCommandData().Name)
 	handle(s, i)
 }
 
@@ -187,7 +202,7 @@ func interactionUserID(i *discordgo.InteractionCreate) string {
 	case i.User != nil:
 		userID = i.User.ID
 	default:
-		log.Panicf("Can't get userID")
+		log.Panicln("Can't get userID")
 	}
 	return userID
 }

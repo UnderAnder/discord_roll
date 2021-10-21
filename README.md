@@ -12,9 +12,9 @@ __Text commands__
 
 __Slash commands__
 
->_it is necessary to register commands with the -regcommands flag_
+>_it is necessary to register commands with the `--reg-commands` flag_
 
->_use the -delcommands flag to remove slash commands after the bot is turned off_
+>_use the `--del-commands` flag to remove slash commands after the bot is turned off_
 
 * /roll
 * /duel
@@ -41,6 +41,18 @@ Once it is built and the migrations applied, then the bot can be run at minimum 
 ```
 
 To acquire the bot token, follow the [Discord API Docs](https://discord.com/developers/docs/intro).
+
+### Configuration
+`configs/config.yml`
+```yaml
+bot:
+  guild-id: # if specified the bot will only work on this guild (server)
+  city-channel: # if specified the cities game will work only on this channel
+repository:
+  sqlite:
+    location: # db location
+
+```
 
 ### Docker
 A Docker image containing the bot and migration utility can be built using

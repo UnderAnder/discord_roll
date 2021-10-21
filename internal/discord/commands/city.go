@@ -46,6 +46,10 @@ func (h *Handler) citySlash(s *discordgo.Session, i *discordgo.InteractionCreate
 
 // city Return result of a cities game as string
 func (h *Handler) city(channelID, discordID, city string) string {
+	// check channel is allowed for game
+	if h.cfg.Bot.CityChanID != "" && channelID != h.cfg.Bot.CityChanID {
+		return "Этот канал не предназначен для игры в города"
+	}
 	// check game already started on channel
 	game, ok := games[channelID]
 	if !ok {

@@ -12,9 +12,9 @@ RUN apk add make
 WORKDIR /bot
 COPY Makefile ./
 COPY migrations ./migrations/
+COPY configs /etc/bot/
 COPY data/sqlite/bot.sqlite3 ./data/sqlite/bot.sqlite3
 COPY --from=build-env /src/bin/* ./
 COPY --from=build-env /go/bin/migrate /bin/
-RUN mkdir -p data/sqlite
-ENTRYPOINT make migrate-up && ls data/sqlite && ./bot -t $BOT_TOKEN -db data/sqlite/bot.sqlite3
+ENTRYPOINT make migrate-up && ./bot -t $BOT_TOKEN -db data/sqlite/bot.sqlite3
 

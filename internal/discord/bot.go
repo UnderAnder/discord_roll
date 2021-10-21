@@ -2,6 +2,7 @@ package discord
 
 import (
 	"errors"
+	"github.com/UnderAnder/discord_roll/internal/config"
 	"github.com/UnderAnder/discord_roll/internal/discord/commands"
 	"github.com/UnderAnder/discord_roll/internal/discord/reactions"
 	"github.com/UnderAnder/discord_roll/internal/repository"
@@ -17,18 +18,19 @@ import (
 type Bot struct {
 	discord    *discordgo.Session
 	repository repository.Repository
+	cfg        *config.Config
 }
 
 // NewBot configures a Bot and returns it.
-func NewBot(token, dbPath string) (*Bot, error) {
-	db, err := repository.New(dbPath)
+func NewBot(cfg *config.Config) (*Bot, error) {
+	db, err := repository.New(cfg.Repository.Sqlite.Location)
 	if err != nil {
 		log.Fatal("error creating DB session,", err)
 		return nil, err
 	}
 
 	// Create a new Discord session using the provided bot token.
-	dg, err := discordgo.New("Bot " + token)
+	dg, err := discordgo.New("Bot " + cfg.Discord.Token)
 	if err != nil {
 		log.Panic("error creating Discord session,", err)
 		return nil, err
@@ -37,7 +39,7 @@ func NewBot(token, dbPath string) (*Bot, error) {
 	// Create Event chan
 	events := make(chan string)
 
-	commandsHandler := commands.NewHandler(db, events)
+	commandsHandler := commands.NewHandler(db, events, cfg)
 	// Register text commands handler
 	dg.AddHandler(commandsHandler.HandleMessage)
 	// Register slash commands handler
@@ -50,12 +52,13 @@ func NewBot(token, dbPath string) (*Bot, error) {
 	return &Bot{
 		discord:    dg,
 		repository: db,
+		cfg:        cfg,
 	}, nil
 }
 
 // Run starts the bot, listens for a halt signal, and shuts down when the halt is received.
-func (b *Bot) Run(regCommands, delCommands bool, guildID string) error {
-	if err := b.Start(regCommands, guildID); err != nil {
+func (b *Bot) Run() error {
+	if err := b.Start(); err != nil {
 		return err
 	}
 
@@ -65,12 +68,12 @@ func (b *Bot) Run(regCommands, delCommands bool, guildID string) error {
 	<-sc
 
 	log.Println("Received stop signal, shutting down...")
-	b.Stop(delCommands, guildID)
+	b.Stop()
 	return nil
 }
 
 // Start opens the connection to the discord web socket.
-func (b *Bot) Start(regCommands bool, guildID string) error {
+func (b *Bot) Start() error {
 	log.Println("Starting bot...")
 	if err := b.repository.Open(); err != nil {
 		return errors.New("failed to open repository")
@@ -81,19 +84,19 @@ func (b *Bot) Start(regCommands bool, guildID string) error {
 	log.Println("Connection to Discord established.")
 
 	// create discord slash commands
-	if regCommands {
-		b.createCommands(guildID)
+	if b.cfg.Bot.RegCommands {
+		b.createCommands()
 	}
 	return nil
 }
 
 // Stop gracefully shuts down the bot.
-func (b *Bot) Stop(delCommands bool, guildID string) {
+func (b *Bot) Stop() {
 	log.Println("Stopping bot...")
 
 	// removing slash commands before exit
-	if delCommands {
-		b.delCommands(guildID)
+	if b.cfg.Bot.DelCommands {
+		b.delCommands()
 	}
 
 	log.Println("Closing connection to Discord...")
@@ -110,7 +113,8 @@ func (b *Bot) Stop(delCommands bool, guildID string) {
 }
 
 // delCommands removes slash commands from Discord
-func (b *Bot) delCommands(guildID string) {
+func (b *Bot) delCommands() {
+	guildID := b.cfg.Bot.GuildID
 	switch guildID {
 	case "":
 		log.Println("Removing slash commands globally...")
@@ -128,7 +132,8 @@ func (b *Bot) delCommands(guildID string) {
 }
 
 // createCommands creates slash commands in Discord
-func (b *Bot) createCommands(guildID string) {
+func (b *Bot) createCommands() {
+	guildID := b.cfg.Bot.GuildID
 	switch guildID {
 	case "":
 		log.Println("Creating slash commands globally...")

@@ -1,0 +1,6 @@
+bot:
+  guild-id:
+  city-channel:
+repository:
+  sqlite:
+    location: ./data/sqlite/bot.sqlite3

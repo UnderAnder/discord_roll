@@ -19,6 +19,7 @@ MIGRATIONS = ./migrations
 SQLITE_MIGRATIONS = $(MIGRATIONS)/sqlite
 DATA = ./data
 SQLITE_DB = $(DATA)/sqlite/bot.sqlite3
+CITIES = $(DATA)/cities
 
 migrate-up:
 	@echo "Migrating up..."
@@ -36,6 +37,9 @@ clean:
 project-utils: $(GO_MIGRATE)
 	@echo "Installing project utilities..."
 
+extract-cities:
+	@tar -zxf $(CITIES)/cities_ru.tar.gz
+
 docker-image:
 	@echo "Building docker image..."
 	@docker build -t bot .
@@ -45,4 +49,4 @@ build:
 	@env CGO_ENABLED=1 go build -o ./bin/bot cmd/bot/main.go
 
 run: build
-	./bin/bot -t ${BOT_TOKEN} -db ${DB_PATH}
+	./bin/bot -t ${BOT_TOKEN}
