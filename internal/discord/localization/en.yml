@@ -7,10 +7,21 @@ bet:
   lose: "Lose! :stuck_out_tongue_closed_eyes: "
   win: "Win! :tada: "
   betTooHigh:
-    one: "The bet is too high, you only have {{.PluralCount}} score"
-    other: "The bet is too high, you only have {{.PluralCount}} scores"
-    many: "The bet is too high, you only have {{.PluralCount}} scores"
+    one: "The bet is too high, you only have {{.PluralCount}} point"
+    other: "The bet is too high, you only have {{.PluralCount}} points"
+    many: "The bet is too high, you only have {{.PluralCount}} points"
   scoreAfter:
-    one: "You now have a {{.PluralCount}} score"
-    other: "You now have a {{.PluralCount}} scores"
-    many: "You now have a {{.PluralCount}} scores"
+    one: "You now have a {{.PluralCount}} point"
+    other: "You now have a {{.PluralCount}} points"
+    many: "You now have a {{.PluralCount}} points"
+
+city:
+  denyChan: "This channel is not intended for playing cities"
+  alreadyGuessed: "The city {{.CityTitle}} has already been named"
+  startMsg: "Game on, next city on {{.StartLetter}}"
+  shouldStart: "The city must start with {{.StartLetter}}"
+  notExists: "City {{.CityTitle}} does not exist"
+  winMsg:
+    one: "Correct :tada: +{{.Score}} point.  The next city on {{.StartLetter}}"
+    other: "Correct :tada: +{{.Score}} points.  The next city on {{.StartLetter}}"
+    many: "Correct :tada: +{{.Score}} points.  The next city on {{.StartLetter}}"

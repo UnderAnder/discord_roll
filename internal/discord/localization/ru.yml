@@ -14,3 +14,14 @@ bet:
     one: "Теперь у тебя {{.PluralCount}} очко"
     other: "Теперь у тебя {{.PluralCount}} очка"
     many: "Теперь у тебя {{.PluralCount}} очков"
+
+city:
+  denyChan: "Этот канал не предназначен для игры в города"
+  alreadyGuessed: "Город {{.CityTitle}} уже был назван"
+  startMsg: "Игра началась, следующий город на {{.StartLetter}}"
+  shouldStart: "Город должен начинаться на {{.StartLetter}}"
+  notExists: "Город {{.CityTitle}} не существует"
+  winMsg:
+    one: "Верно :tada: +{{.Score}} очко.  Слудующий город на {{.StartLetter}}"
+    other: "Верно :tada: +{{.Score}} очка. Слудующий город на {{.StartLetter}}"
+    many: "Верно :tada: +{{.Score}} очков. Слудующий город на {{.StartLetter}}"
