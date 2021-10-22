@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"log"
 	"math/rand"
 	"strconv"
@@ -22,25 +22,36 @@ type duel struct {
 func (h *Handler) duelMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// check message came from a channel
 	if m.Member == nil {
-		sendMessageReply(s, m, "Вызвать на дуэль можно только на канале")
+		denyChan, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "duelRoll.denyChan",
+		})
+		sendMessageReply(s, m, denyChan)
 		return
 	}
 
 	str := strings.Fields(m.Content)
 
-	// check is command correct
+	// command validation
 	if len(str) != 3 {
-		sendMessageReply(s, m, "Неверный формат, должно быть `!duel @user ставка`")
+		wrongFormat, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "duelRoll.wrongFormat",
+		})
+		sendMessageReply(s, m, wrongFormat)
 		return
 	}
 	if len(m.Mentions) != 1 {
-		sendMessageReply(s, m, "Оппонент не найден, упомяни одного участника через @")
+		opponentNotFound, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "duelRoll.opponentNotFound",
+		})
+		sendMessageReply(s, m, opponentNotFound)
 		return
 	}
-
 	bet, err := strconv.Atoi(str[2])
 	if err != nil {
-		sendMessageReply(s, m, "Ставка должна быть числом")
+		shouldBeNumber, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "bet.shouldBeNumber",
+		})
+		sendMessageReply(s, m, shouldBeNumber)
 		return
 	}
 
@@ -72,7 +83,10 @@ func (h *Handler) duelMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 // duelSlash Print invite to a duel and the result of the duel to the guild channel in response to the slash command
 func (h *Handler) duelSlash(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member == nil {
-		sendRespond(s, i, "Вызвать на дуэль можно только на канале")
+		denyChan, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "duelRoll.denyChan",
+		})
+		sendRespond(s, i, denyChan)
 		return
 	}
 
@@ -120,25 +134,43 @@ func (h *Handler) duelSlash(s *discordgo.Session, i *discordgo.InteractionCreate
 func (h *Handler) duelStart(duel duel) (string, bool) {
 	// check opponent is not bot
 	if duel.opponent.ID == duel.sess.State.User.ID {
-		return "Нельзя вызвать бота на дуэль", false
+		denyBot, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "duelRoll.denyBot",
+		})
+		return denyBot, false
 	}
 
-	if duel.bet < 0 {
-		return "Ставка не может быть отрицательной", false
+	if duel.bet <= 0 {
+		greaterThanZero, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "bet.greaterThanZero",
+		})
+		return greaterThanZero, false
 	}
 
 	authorScore, _ := h.repository.GetScore(duel.challenger.ID)
 	opponentScore, _ := h.repository.GetScore(duel.opponent.ID)
 	if duel.bet > authorScore {
-		return fmt.Sprintf("Ставка слишком высока, у тебя всего %d", authorScore), false
+		betTooHigh := h.localizer.MustLocalize(&i18n.LocalizeConfig{
+			MessageID:   "bet.betTooHigh",
+			PluralCount: authorScore,
+		})
+		return betTooHigh, false
 	}
 	if duel.bet > opponentScore {
-		msg := "У твоего оппонента недостаточно очков, ставка не должна превышать %d"
-		return fmt.Sprintf(msg, opponentScore), false
+		betTooHighForOpponent := h.localizer.MustLocalize(&i18n.LocalizeConfig{
+			MessageID:   "duelRoll.betTooHighForOpponent",
+			PluralCount: opponentScore,
+		})
+		return betTooHighForOpponent, false
 	}
 
-	msg := "%s тебя вызвали на дуэль, нажми на :game_die: чтобы принять, или :no_entry_sign: чтобы отказаться"
-	return fmt.Sprintf(msg, duel.opponent.Mention()), true
+	duelInvite, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "duelRoll.duelInvite",
+		TemplateData: map[string]string{
+			"Opponent": duel.opponent.Mention(),
+		},
+	})
+	return duelInvite, true
 }
 
 // duel process the duel
@@ -159,24 +191,68 @@ func (h *Handler) duel(duel duel) (string, error) {
 		return "", nil
 	}
 
-	authorRoll := rand.Intn(100) + 1   //nolint:gosec
-	opponentRoll := rand.Intn(100) + 1 //nolint:gosec
+	challengerRoll := rand.Intn(100) + 1 //nolint:gosec
+	opponentRoll := rand.Intn(100) + 1   //nolint:gosec
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%s выбрасывает %d\n", duel.challenger.Username, authorRoll))
-	sb.WriteString(fmt.Sprintf("%s выбрасывает %d\n", duel.opponent.Username, opponentRoll))
-	switch {
-	case authorRoll < opponentRoll:
-		_ = h.repository.AddScore(duel.challenger.ID, -duel.bet)
-		_ = h.repository.AddScore(duel.opponent.ID, duel.bet)
-		sb.WriteString(fmt.Sprintf("%s победил и получает %d очков соперника!", duel.opponent.Username, duel.bet))
-	case authorRoll > opponentRoll:
-		_ = h.repository.AddScore(duel.challenger.ID, duel.bet)
-		_ = h.repository.AddScore(duel.opponent.ID, -duel.bet)
+	challengerRollMsg, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "duelRoll.rollMsg",
+		TemplateData: map[string]string{
+			"Name": duel.challenger.Username,
+			"Roll": strconv.Itoa(challengerRoll),
+		},
+	})
+	opponentRollMsg, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "duelRoll.rollMsg",
+		TemplateData: map[string]string{
+			"Name": duel.opponent.Username,
+			"Roll": strconv.Itoa(opponentRoll),
+		},
+	})
+	challengerWinMsg, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "duelRoll.winMsg",
+		TemplateData: map[string]string{
+			"Name":  duel.challenger.Username,
+			"Score": strconv.Itoa(duel.bet),
+		},
+		PluralCount: duel.bet,
+	})
+	opponentWinMsg, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "duelRoll.winMsg",
+		TemplateData: map[string]string{
+			"Name":  duel.opponent.Username,
+			"Score": strconv.Itoa(duel.bet),
+		},
+		PluralCount: duel.bet,
+	})
+	equal, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "duelRoll.equal",
+	})
 
-		sb.WriteString(fmt.Sprintf("%s победил и получает %d очков соперника!", duel.challenger.Username, duel.bet))
+	sb.WriteString(challengerRollMsg)
+	sb.WriteString(opponentRollMsg)
+	switch {
+	case challengerRoll < opponentRoll:
+		h.updateScore(duel.opponent.ID, duel.challenger.ID, duel.bet)
+		sb.WriteString(opponentWinMsg)
+	case challengerRoll > opponentRoll:
+		h.updateScore(duel.challenger.ID, duel.opponent.ID, duel.bet)
+		sb.WriteString(challengerWinMsg)
 	default:
-		sb.WriteString("Ваши силы равны, оба остались при своём")
+		sb.WriteString(equal)
 	}
 	return sb.String(), nil
+}
+
+func (h *Handler) updateScore(winnerID, loserID string, bet int) {
+	err := h.repository.AddScore(winnerID, bet)
+	if err != nil {
+		log.Printf("error during increasing score: %v\n", err)
+		return
+	}
+	err = h.repository.AddScore(loserID, -bet)
+	if err != nil {
+		_ = h.repository.AddScore(winnerID, -bet)
+		log.Printf("error during decreasing score: %v\n", err)
+	}
 }

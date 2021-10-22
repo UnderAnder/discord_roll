@@ -25,3 +25,20 @@ city:
     one: "Correct :tada: +{{.Score}} point.  The next city on {{.StartLetter}}"
     other: "Correct :tada: +{{.Score}} points.  The next city on {{.StartLetter}}"
     many: "Correct :tada: +{{.Score}} points.  The next city on {{.StartLetter}}"
+
+duelRoll:
+  denyChan: "You can duel only on the channel"
+  denyBot: "You cannot challenge a bot to a duel"
+  wrongFormat: "Wrong format, it should be `!duel @user bet`"
+  opponentNotFound: "Opponent not found, mention one participant via @"
+  duelInvite: "{{.Opponent}} you have been challenged to a duel, hit :game_die: to accept, or :no_entry_sign: to decline"
+  rollMsg: "{{.Name}} rolls {{.Roll}}\n"
+  equal: "Your forces are equal, both of you are on your own"
+  betTooHighForOpponent:
+    one: "Your opponent does not have enough points, the bet must not exceed {{.PluralCount}} point"
+    other: "Your opponent does not have enough points, the bet must not exceed {{.PluralCount}} points"
+    many: "Your opponent does not have enough points, the bet must not exceed {{.PluralCount}} points"
+  winMsg:
+    one: "{{.Name}} wins and gets {{.Score}} the opponent's point!"
+    other: "{{.Name}} wins and gets {{.Score}} the opponent's points!"
+    many: "{{.Name}} wins and gets {{.Score}} the opponent's points!"
