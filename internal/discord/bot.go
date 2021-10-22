@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"embed"
 	"errors"
 	"log"
 	"os"
@@ -18,6 +19,9 @@ import (
 	"golang.org/x/text/language"
 	"gopkg.in/yaml.v2"
 )
+
+//go:embed localization/en.yml localization/ru.yml
+var i18nFS embed.FS
 
 // Bot listens to Discord and performs the various actions
 type Bot struct {
@@ -39,11 +43,11 @@ func NewBot(cfg *config.Config) (*Bot, error) {
 	// i18n
 	bundle := i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("yml", yaml.Unmarshal)
-	_, err = bundle.LoadMessageFile("./localization/en.yml")
+	_, err = bundle.LoadMessageFileFS(i18nFS, "localization/en.yml")
 	if err != nil {
 		return nil, err
 	}
-	_, err = bundle.LoadMessageFile("./localization/ru.yml")
+	_, err = bundle.LoadMessageFileFS(i18nFS, "localization/ru.yml")
 	if err != nil {
 		return nil, err
 	}
