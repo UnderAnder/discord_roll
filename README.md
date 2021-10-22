@@ -46,6 +46,7 @@ To acquire the bot token, follow the [Discord API Docs](https://discord.com/deve
 `configs/config.yml`
 ```yaml
 bot:
+  lang: en # should be "en" or "ru"
   guild-id: # if specified the bot will only work on this guild (server)
   city-channel: # if specified the cities game will work only on this channel
 repository:

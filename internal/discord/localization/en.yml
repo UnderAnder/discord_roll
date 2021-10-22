@@ -1,0 +1,61 @@
+internalErr: "An internal error occurred"
+
+bet:
+  shouldBeNumber: "The bet must be a number"
+  specifyBet: "You need to specify the bet"
+  greaterThanZero: "The bet must be greater than 0"
+  lose: "Lose! :stuck_out_tongue_closed_eyes: "
+  win: "Win! :tada: "
+  betTooHigh:
+    one: "The bet is too high, you only have {{.PluralCount}} point"
+    other: "The bet is too high, you only have {{.PluralCount}} points"
+    many: "The bet is too high, you only have {{.PluralCount}} points"
+  scoreAfter:
+    one: "You now have a {{.PluralCount}} point"
+    other: "You now have a {{.PluralCount}} points"
+    many: "You now have a {{.PluralCount}} points"
+
+city:
+  denyChan: "This channel is not intended for playing cities"
+  alreadyGuessed: "The city {{.CityTitle}} has already been named"
+  startMsg: "Game on, next city on {{.StartLetter}}"
+  shouldStart: "The city must start with {{.StartLetter}}"
+  notExists: "City {{.CityTitle}} does not exist"
+  winMsg:
+    one: "Correct :tada: +{{.Score}} point.  The next city on {{.StartLetter}}"
+    other: "Correct :tada: +{{.Score}} points.  The next city on {{.StartLetter}}"
+    many: "Correct :tada: +{{.Score}} points.  The next city on {{.StartLetter}}"
+
+duelRoll:
+  denyChan: "You can duel only on the channel"
+  denyBot: "You cannot challenge a bot to a duel"
+  wrongFormat: "Wrong format, it should be `!duel @user bet`"
+  opponentNotFound: "Opponent not found, mention one participant via @"
+  duelInvite: "{{.Opponent}} you have been challenged to a duel, hit :game_die: to accept, or :no_entry_sign: to decline"
+  rollMsg: "{{.Name}} rolls {{.Roll}}\n"
+  equal: "Your forces are equal, both of you are on your own"
+  betTooHighForOpponent:
+    one: "Your opponent does not have enough points, the bet must not exceed {{.PluralCount}} point"
+    other: "Your opponent does not have enough points, the bet must not exceed {{.PluralCount}} points"
+    many: "Your opponent does not have enough points, the bet must not exceed {{.PluralCount}} points"
+  winMsg:
+    one: "{{.Name}} wins and gets {{.Score}} the opponent's point!"
+    other: "{{.Name}} wins and gets {{.Score}} the opponent's points!"
+    many: "{{.Name}} wins and gets {{.Score}} the opponent's points!"
+
+help:
+  msg: |
+    Commands:
+    - `!roll` I bet you can't roll 100
+    - `!duel` Roll against an opponent with a bet
+    - `bet` Gambling
+    - `!city (!c)` Сities game
+    - `!top (! leaderboard)` List of leaders
+    - `!score` How many points do you have
+    - `!help` This message
+
+score:
+  result:
+    one: "You have {{.PluralCount}} point"
+    other: "You have {{.PluralCount}} points"
+    many: "You have {{.PluralCount}} points"

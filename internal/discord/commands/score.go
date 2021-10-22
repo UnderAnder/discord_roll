@@ -2,8 +2,8 @@ package commands
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"log"
-	"strconv"
 )
 
 // scoreMessage Print user score in response to the text command
@@ -33,5 +33,9 @@ func (h *Handler) score(userID string) (string, error) {
 		log.Println(err)
 		return "", err
 	}
-	return strconv.Itoa(score), nil
+	result, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID:   "score.result",
+		PluralCount: score,
+	})
+	return result, nil
 }

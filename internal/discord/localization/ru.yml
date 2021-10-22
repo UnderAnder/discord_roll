@@ -1,0 +1,61 @@
+internalErr: "Произошла внутренняя ошибка"
+
+bet:
+  shouldBeNumber: "Ставка должна быть числом"
+  specifyBet: "Нужно указать ставку"
+  greaterThanZero: "Ставка должна быть больше 0"
+  lose: "Проиграл! :stuck_out_tongue_closed_eyes: "
+  win: "Выйграл! :tada: "
+  betTooHigh:
+    one: "Слишком высокая ставка, у тебя всего {{.PluralCount}} очко"
+    other: "Слишком высокая ставка, у тебя всего {{.PluralCount}} очка"
+    many: "Слишком высокая ставка, у тебя всего {{.PluralCount}} очков"
+  scoreAfter:
+    one: "Теперь у тебя {{.PluralCount}} очко"
+    other: "Теперь у тебя {{.PluralCount}} очка"
+    many: "Теперь у тебя {{.PluralCount}} очков"
+
+city:
+  denyChan: "Этот канал не предназначен для игры в города"
+  alreadyGuessed: "Город {{.CityTitle}} уже был назван"
+  startMsg: "Игра началась, следующий город на {{.StartLetter}}"
+  shouldStart: "Город должен начинаться на {{.StartLetter}}"
+  notExists: "Город {{.CityTitle}} не существует"
+  winMsg:
+    one: "Верно :tada: +{{.Score}} очко.  Слудующий город на {{.StartLetter}}"
+    other: "Верно :tada: +{{.Score}} очка. Слудующий город на {{.StartLetter}}"
+    many: "Верно :tada: +{{.Score}} очков. Слудующий город на {{.StartLetter}}"
+
+duelRoll:
+  denyChan: "Вызвать на дуэль можно только на канале"
+  denyBot: "Нельзя вызвать бота на дуэль"
+  wrongFormat: "Неверный формат, должно быть `!duel @user ставка`"
+  opponentNotFound: "Оппонент не найден, упомяни одного участника через @"
+  duelInvite: "{{.Opponent}} тебя вызвали на дуэль, нажми на :game_die: чтобы принять, или :no_entry_sign: чтобы отказаться"
+  rollMsg: "{{.Name}} выбрасывает {{.Roll}}\n"
+  equal: "Ваши силы равны, оба остались при своём"
+  betTooHighForOpponent:
+    one: "У твоего оппонента недостаточно очков, ставка не должна превышать {{.PluralCount}} очко"
+    other: "У твоего оппонента недостаточно очков, ставка не должна превышать {{.PluralCount}} очка"
+    many: "У твоего оппонента недостаточно очков, ставка не должна превышать {{.PluralCount}} очков"
+  winMsg:
+    one: "{{.Name}} победил и получает {{.Score}} очко соперника!"
+    other: "{{.Name}} победил и получает {{.Score}} очка соперника!"
+    many: "{{.Name}} победил и получает {{.Score}} очков соперника!"
+
+help:
+  msg: |
+    Команды:
+    - `!roll (!ролл)` Спорим 100 не выкинешь?
+    - `!duel (!дуэль)` Ролл против соперника со ставкой
+    - `!bet (!бет, !ставка)` Лудомания
+    - `!city (!город, !г)` Игра в города
+    - `!top (!топ, !leaderboard)` Список лидеров
+    - `!score (!очки)` Сколько у тебя очков
+    - `!help (!помощь)` Это сообщение
+
+score:
+  result:
+    one: "У тебя {{.PluralCount}} очко"
+    other: "У тебя {{.PluralCount}} очка"
+    many: "У тебя {{.PluralCount}} очков"

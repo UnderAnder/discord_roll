@@ -9,6 +9,7 @@ import (
 // Config contains the various values that are configurable for the bot.
 type Config struct {
 	Bot struct {
+		Lang        string
 		GuildID     string
 		CityChanID  string
 		RegCommands bool
@@ -41,6 +42,7 @@ func GetConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
+	cfg.Bot.Lang = viper.GetString("bot.lang")
 	cfg.Bot.GuildID = viper.GetString("bot.guild-id")
 	cfg.Bot.CityChanID = viper.GetString("bot.city-channel")
 

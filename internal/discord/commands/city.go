@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"fmt"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -48,7 +49,10 @@ func (h *Handler) citySlash(s *discordgo.Session, i *discordgo.InteractionCreate
 func (h *Handler) city(channelID, discordID, city string) string {
 	// check channel is allowed for game
 	if h.cfg.Bot.CityChanID != "" && channelID != h.cfg.Bot.CityChanID {
-		return "Этот канал не предназначен для игры в города"
+		denyChan, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "city.denyChan",
+		})
+		return denyChan
 	}
 	// check game already started on channel
 	game, ok := games[channelID]
@@ -61,7 +65,13 @@ func (h *Handler) city(channelID, discordID, city string) string {
 
 	_, alreadyGuessed := game.prevCities[city]
 	if alreadyGuessed {
-		return fmt.Sprintf("Город %s уже был назван", cityTitle)
+		guessedMsg, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "city.alreadyGuessed",
+			TemplateData: map[string]string{
+				"CityTitle": cityTitle,
+			},
+		})
+		return guessedMsg
 	}
 
 	// start game
@@ -70,17 +80,35 @@ func (h *Handler) city(channelID, discordID, city string) string {
 		game.prevAuthorID = discordID
 		game.prevTime = time.Now()
 		game.prevCities[city] = void
-		return fmt.Sprintf("Игра началась, следующий город на %s", strings.ToUpper(getLastChar(game.prevCity)))
+		startMsg, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "city.startMsg",
+			TemplateData: map[string]string{
+				"StartLetter": strings.ToUpper(getLastChar(game.prevCity)),
+			},
+		})
+		return startMsg
 	}
 
 	lastChar := getLastChar(game.prevCity)
 	if !strings.HasPrefix(city, lastChar) {
-		return fmt.Sprintf("Город должен начинаться на %s", strings.ToUpper(lastChar))
+		shouldStart, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "city.shouldStart",
+			TemplateData: map[string]string{
+				"StartLetter": strings.ToUpper(lastChar),
+			},
+		})
+		return shouldStart
 	}
 
 	exists, _ := h.repository.CityExist(city)
 	if !exists {
-		return fmt.Sprintf("Город %s не существует", cityTitle)
+		notExists, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "city.notExists",
+			TemplateData: map[string]string{
+				"CityTitle": cityTitle,
+			},
+		})
+		return notExists
 	}
 
 	score := scoreAccrual(game, discordID)
@@ -94,7 +122,15 @@ func (h *Handler) city(channelID, discordID, city string) string {
 	game.prevTime = time.Now()
 	lastChar = getLastChar(game.prevCity)
 
-	return fmt.Sprintf("Верно :tada: +%d Слудующий город на %s", score, strings.ToUpper(lastChar))
+	winMsg, _ := h.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "city.winMsg",
+		TemplateData: map[string]string{
+			"StartLetter": strings.ToUpper(lastChar),
+			"Score":       strconv.Itoa(score),
+		},
+		PluralCount: score,
+	})
+	return winMsg
 }
 
 func scoreAccrual(game *cityGame, id string) int {

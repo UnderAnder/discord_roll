@@ -6,7 +6,9 @@ import (
 
 	"github.com/UnderAnder/discord_roll/internal/config"
 	"github.com/UnderAnder/discord_roll/internal/repository"
+
 	"github.com/bwmarrin/discordgo"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 const (
@@ -90,7 +92,7 @@ var (
 	helpCommand  = map[string]bool{"help": true, "рудз": true, "помощь": true}
 	rollCommand  = map[string]bool{"roll": true, "кщдд": true, "ролл": true}
 	duelCommand  = map[string]bool{"duel": true, "вгуд": true, "дуэль": true}
-	cityCommand  = map[string]bool{"city": true, "сшен": true, "город": true, "г": true}
+	cityCommand  = map[string]bool{"city": true, "c": true, "сшен": true, "город": true, "г": true}
 	betCommand   = map[string]bool{"bet": true, "иуе": true, "бет": true, "ставка": true}
 	topCommand   = map[string]bool{"top": true, "ещз": true, "топ": true, "leaderboard": true, "лидеры": true}
 	scoreCommand = map[string]bool{"score": true, "ысщку": true, "очки": true}
@@ -103,10 +105,11 @@ type Handler struct {
 	repository repository.Repository
 	eventChan  chan string
 	cfg        *config.Config
+	localizer  *i18n.Localizer
 }
 
-func NewHandler(r repository.Repository, e chan string, cfg *config.Config) *Handler {
-	return &Handler{repository: r, eventChan: e, cfg: cfg}
+func NewHandler(r repository.Repository, e chan string, cfg *config.Config, loc *i18n.Localizer) *Handler {
+	return &Handler{repository: r, eventChan: e, cfg: cfg, localizer: loc}
 }
 
 // HandleMessage text command handler

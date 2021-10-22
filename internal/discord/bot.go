@@ -1,33 +1,57 @@
 package discord
 
 import (
+	"embed"
 	"errors"
-	"github.com/UnderAnder/discord_roll/internal/config"
-	"github.com/UnderAnder/discord_roll/internal/discord/commands"
-	"github.com/UnderAnder/discord_roll/internal/discord/reactions"
-	"github.com/UnderAnder/discord_roll/internal/repository"
-	"github.com/bwmarrin/discordgo"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/UnderAnder/discord_roll/internal/config"
+	"github.com/UnderAnder/discord_roll/internal/discord/commands"
+	"github.com/UnderAnder/discord_roll/internal/discord/reactions"
+	"github.com/UnderAnder/discord_roll/internal/repository"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
+	"gopkg.in/yaml.v2"
 )
+
+//go:embed localization/en.yml localization/ru.yml
+var i18nFS embed.FS
 
 // Bot listens to Discord and performs the various actions
 type Bot struct {
 	discord    *discordgo.Session
 	repository repository.Repository
 	cfg        *config.Config
+	localizer  *i18n.Localizer
 }
 
 // NewBot configures a Bot and returns it.
 func NewBot(cfg *config.Config) (*Bot, error) {
+	// db init
 	db, err := repository.New(cfg.Repository.Sqlite.Location)
 	if err != nil {
 		log.Fatal("error creating DB session,", err)
 		return nil, err
 	}
+
+	// i18n
+	bundle := i18n.NewBundle(language.English)
+	bundle.RegisterUnmarshalFunc("yml", yaml.Unmarshal)
+	_, err = bundle.LoadMessageFileFS(i18nFS, "localization/en.yml")
+	if err != nil {
+		return nil, err
+	}
+	_, err = bundle.LoadMessageFileFS(i18nFS, "localization/ru.yml")
+	if err != nil {
+		return nil, err
+	}
+	localizer := i18n.NewLocalizer(bundle, cfg.Bot.Lang)
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + cfg.Discord.Token)
@@ -39,7 +63,8 @@ func NewBot(cfg *config.Config) (*Bot, error) {
 	// Create Event chan
 	events := make(chan string)
 
-	commandsHandler := commands.NewHandler(db, events, cfg)
+	// handlers
+	commandsHandler := commands.NewHandler(db, events, cfg, localizer)
 	// Register text commands handler
 	dg.AddHandler(commandsHandler.HandleMessage)
 	// Register slash commands handler
@@ -53,6 +78,7 @@ func NewBot(cfg *config.Config) (*Bot, error) {
 		discord:    dg,
 		repository: db,
 		cfg:        cfg,
+		localizer:  localizer,
 	}, nil
 }
 
