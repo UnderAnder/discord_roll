@@ -53,3 +53,9 @@ help:
     - `!top (!топ, !leaderboard)` Список лидеров
     - `!score (!очки)` Сколько у тебя очков
     - `!help (!помощь)` Это сообщение
+
+score:
+  result:
+    one: "У тебя {{.PluralCount}} очко"
+    other: "У тебя {{.PluralCount}} очка"
+    many: "У тебя {{.PluralCount}} очков"

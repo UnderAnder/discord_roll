@@ -48,8 +48,14 @@ help:
     Commands:
     - `!roll` I bet you can't roll 100
     - `!duel` Roll against an opponent with a bet
-    - ``bet`` Gambling
+    - `bet` Gambling
     - `!city (!c)` Сities game
     - `!top (! leaderboard)` List of leaders
     - `!score` How many points do you have
     - `!help` This message
+
+score:
+  result:
+    one: "You have {{.PluralCount}} point"
+    other: "You have {{.PluralCount}} points"
+    many: "You have {{.PluralCount}} points"
