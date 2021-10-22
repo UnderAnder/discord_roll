@@ -1,6 +1,7 @@
 bot:
-  guild-id:
-  city-channel:
+  lang: en # should be "en" or "ru"
+  guild-id: # if specified the bot will only work on this guild (server)
+  city-channel: # if specified the cities game will work only on this channel
 repository:
   sqlite:
-    location: ./data/sqlite/bot.sqlite3
+    location: ./data/sqlite/bot.sqlite3 # db location

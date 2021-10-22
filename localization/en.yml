@@ -1,0 +1,16 @@
+internalErr: "An internal error occurred"
+
+bet:
+  shouldBeNumber: "The bet must be a number"
+  specifyBet: "You need to specify the bet"
+  greaterThanZero: "The bet must be greater than 0"
+  lose: "Lose! :stuck_out_tongue_closed_eyes: "
+  win: "Win! :tada: "
+  betTooHigh:
+    one: "The bet is too high, you only have {{.PluralCount}} score"
+    other: "The bet is too high, you only have {{.PluralCount}} scores"
+    many: "The bet is too high, you only have {{.PluralCount}} scores"
+  scoreAfter:
+    one: "You now have a {{.PluralCount}} score"
+    other: "You now have a {{.PluralCount}} scores"
+    many: "You now have a {{.PluralCount}} scores"

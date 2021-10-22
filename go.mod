@@ -7,6 +7,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.8 // direct
 	github.com/spf13/pflag v1.0.5 // direct
 	github.com/spf13/viper v1.9.0 // direct
+	github.com/nicksnyder/go-i18n/v2 v2.1.2 // direct
 )
 
 require (

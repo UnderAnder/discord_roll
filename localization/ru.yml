@@ -1,0 +1,16 @@
+internalErr: "Произошла внутренняя ошибка"
+
+bet:
+  shouldBeNumber: "Ставка должна быть числом"
+  specifyBet: "Нужно указать ставку"
+  greaterThanZero: "Ставка должна быть больше 0"
+  lose: "Проиграл! :stuck_out_tongue_closed_eyes: "
+  win: "Выйграл! :tada: "
+  betTooHigh:
+    one: "Слишком высокая ставка, у тебя всего {{.PluralCount}} очко"
+    other: "Слишком высокая ставка, у тебя всего {{.PluralCount}} очка"
+    many: "Слишком высокая ставка, у тебя всего {{.PluralCount}} очков"
+  scoreAfter:
+    one: "Теперь у тебя {{.PluralCount}} очко"
+    other: "Теперь у тебя {{.PluralCount}} очка"
+    many: "Теперь у тебя {{.PluralCount}} очков"
