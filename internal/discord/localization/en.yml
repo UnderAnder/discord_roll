@@ -42,3 +42,14 @@ duelRoll:
     one: "{{.Name}} wins and gets {{.Score}} the opponent's point!"
     other: "{{.Name}} wins and gets {{.Score}} the opponent's points!"
     many: "{{.Name}} wins and gets {{.Score}} the opponent's points!"
+
+help:
+  msg: |
+    Commands:
+    - `!roll` I bet you can't roll 100
+    - `!duel` Roll against an opponent with a bet
+    - ``bet`` Gambling
+    - `!city (!c)` Сities game
+    - `!top (! leaderboard)` List of leaders
+    - `!score` How many points do you have
+    - `!help` This message

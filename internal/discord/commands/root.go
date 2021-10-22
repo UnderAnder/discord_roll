@@ -92,7 +92,7 @@ var (
 	helpCommand  = map[string]bool{"help": true, "рудз": true, "помощь": true}
 	rollCommand  = map[string]bool{"roll": true, "кщдд": true, "ролл": true}
 	duelCommand  = map[string]bool{"duel": true, "вгуд": true, "дуэль": true}
-	cityCommand  = map[string]bool{"city": true, "сшен": true, "город": true, "г": true}
+	cityCommand  = map[string]bool{"city": true, "c": true, "сшен": true, "город": true, "г": true}
 	betCommand   = map[string]bool{"bet": true, "иуе": true, "бет": true, "ставка": true}
 	topCommand   = map[string]bool{"top": true, "ещз": true, "топ": true, "leaderboard": true, "лидеры": true}
 	scoreCommand = map[string]bool{"score": true, "ысщку": true, "очки": true}
